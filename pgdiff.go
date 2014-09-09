@@ -11,7 +11,8 @@ import "database/sql"
 import _ "github.com/lib/pq"
 import "github.com/joncrlsn/pgutil"
 
-// A database definition (table, column, constraint, indes, role, etc) that can be
+
+// Schema is a database definition (table, column, constraint, indes, role, etc) that can be
 // added, dropped, or changed to match another database.
 type Schema interface {
 	Compare(schema interface{}) int
@@ -26,19 +27,19 @@ type Schema interface {
  */
 func main() {
 	//testDiff()
-    //os.Exit(0)
+	//os.Exit(0)
 
-	dbInfo1, dbInfo2 := ParseFlags()
+	dbInfo1, dbInfo2 := parseFlags()
 	fmt.Println("-- db1:", dbInfo1)
 	fmt.Println("-- db2:", dbInfo2)
-    fmt.Println("Run the following SQL againt db2")
+	fmt.Println("Run the following SQL againt db2")
 
 	// Remaining args:
 	args := flag.Args()
-    if len(args) == 0 {
-        fmt.Println("The required first argument is SchemaType: TABLE, COLUMN, FOREIGN_KEY, CONSTRAINT, ROLE")
-        os.Exit(1)
-    }
+	if len(args) == 0 {
+		fmt.Println("The required first argument is SchemaType: TABLE, COLUMN, FOREIGN_KEY, CONSTRAINT, ROLE")
+		os.Exit(1)
+	}
 
 	conn1, err := dbInfo1.Open()
 	check("opening database", err)
@@ -46,23 +47,23 @@ func main() {
 	conn2, err := dbInfo2.Open()
 	check("opening database", err)
 
-    // This section will be improved so that you do not need to choose the type
-    // of alter statements to generate.  Rather, all should be generated in the
-    // proper order. 
+	// This section will be improved so that you do not need to choose the type
+	// of alter statements to generate.  Rather, all should be generated in the
+	// proper order.
 	schemaType := strings.ToUpper(args[0])
 	if schemaType == "TABLE" {
 		compareTables(conn1, conn2)
-    } else if schemaType == "COLUMN" {
+	} else if schemaType == "COLUMN" {
 		compareColumns(conn1, conn2)
-    } else if schemaType == "FOREIGN_KEY" {
+	} else if schemaType == "FOREIGN_KEY" {
 		compareForeignKeys(conn1, conn2)
 	} else {
-        fmt.Println("Not yet handled:", schemaType)
-    }
+		fmt.Println("Not yet handled:", schemaType)
+	}
 }
 
 /*
- * Compare the tables in the two databases 
+ * Compare the tables in the two databases
  */
 func compareTables(conn1 *sql.DB, conn2 *sql.DB) {
 	sql := `
@@ -76,16 +77,16 @@ ORDER by table_name;`
 	rowChan1, _ := pgutil.QueryStrings(conn1, sql)
 	rowChan2, _ := pgutil.QueryStrings(conn2, sql)
 
-    // We have to explicitly type this as Schema for some reason
+	// We have to explicitly type this as Schema for some reason
 	var schema1 Schema = &TableSchema{channel: rowChan1}
 	var schema2 Schema = &TableSchema{channel: rowChan2}
 
-    // Compare the tables
+	// Compare the tables
 	doDiff(schema1, schema2)
 }
 
 /*
- * Compare the columns in the two databases 
+ * Compare the columns in the two databases
  */
 func compareColumns(conn1 *sql.DB, conn2 *sql.DB) {
 	sql := `
@@ -102,16 +103,16 @@ ORDER by table_name, column_name;`
 	rowChan1, _ := pgutil.QueryStrings(conn1, sql)
 	rowChan2, _ := pgutil.QueryStrings(conn2, sql)
 
-    // We have to explicitly type this as Schema for some reason
+	// We have to explicitly type this as Schema for some reason
 	var schema1 Schema = &ColumnSchema{channel: rowChan1}
 	var schema2 Schema = &ColumnSchema{channel: rowChan2}
 
-    // Compare the columns
+	// Compare the columns
 	doDiff(schema1, schema2)
 }
 
 /*
- * Compare the columns in the two databases 
+ * Compare the columns in the two databases
  */
 func compareForeignKeys(conn1 *sql.DB, conn2 *sql.DB) {
 	sql := `
@@ -132,11 +133,11 @@ ORDER BY tc.table_name, tc.constraint_name; `
 	rowChan1, _ := pgutil.QueryStrings(conn1, sql)
 	rowChan2, _ := pgutil.QueryStrings(conn2, sql)
 
-    // We have to explicitly type this as Schema for some reason
+	// We have to explicitly type this as Schema for some reason
 	var schema1 Schema = &ForeignKeySchema{channel: rowChan1}
 	var schema2 Schema = &ForeignKeySchema{channel: rowChan2}
 
-    // Compare the columns
+	// Compare the columns
 	doDiff(schema1, schema2)
 }
 
@@ -257,11 +258,11 @@ func check(msg string, err error) {
 }
 
 func _compareString(s1 string, s2 string) int {
-    if s1 == s2 {
-        return 0
-    } else if s1 < s2 {
-        return -1
-    } else {
-        return +1
-    }
+	if s1 == s2 {
+		return 0
+	} else if s1 < s2 {
+		return -1
+	} else {
+		return +1
+	}
 }
