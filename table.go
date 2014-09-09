@@ -38,7 +38,7 @@ func (c TableSchema) Add() {
 
 // Return SQL to drop the table
 func (c TableSchema) Drop() {
-    fmt.Printf("DROP TABLE %s;\n", c.row["table_name"])
+    fmt.Printf("DROP TABLE IF EXISTS %s;\n", c.row["table_name"])
 }
 
 // Handle the case where the table and column match, but the details do not

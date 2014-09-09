@@ -43,7 +43,7 @@ func (c ForeignKeySchema) Add() {
 
 // Return SQL to drop the table
 func (c ForeignKeySchema) Drop() {
-    fmt.Printf("ALTER TABLE %s DROP CONSTRAINT %s;\n", c.row["table_name"], c.row["constraint_name"])
+    fmt.Printf("ALTER TABLE %s DROP CONSTRAINT IF EXISTS %s;\n", c.row["table_name"], c.row["constraint_name"])
 }
 
 // Handle the case where the table and column match, but the details do not
