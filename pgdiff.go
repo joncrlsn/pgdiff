@@ -46,7 +46,9 @@ func main() {
 	conn2, err := dbInfo2.Open()
 	check("opening database", err)
 
-	// schemaType
+    // This section will be improved so that you do not need to choose the type
+    // of alter statements to generate.  Rather, all should be generated in the
+    // proper order. 
 	schemaType := strings.ToUpper(args[0])
 	if schemaType == "TABLE" {
 		compareTables(conn1, conn2)
