@@ -4,13 +4,13 @@ Written in GoLang, this utility compares the schema between two PostgreSQL datab
 
 It is written to be easy to add and improve the accuracy of the diff.  Please let me know if you think this goal has not been met.  I'm very interested in suggestions and contributions to improve this program.  I'm not a GoLang expert yet, but each program I write gets me closer to that goal.
 
-I'm a big fan of GoLang because of how easy it is to deliver a single executable on almost any platform.  But, just as important I love the design choices and the concurrency features which I've only begun to delve into.  Streaming objects back (via a channel) from a go routine is far better than returning a potentially massive list of objects.
+I'm a big fan of GoLang because of how easy it is to deliver a single executable on almost any platform.  But, just as important I love the design choices and the concurrency features which I've only begun to delve into.  For example, streaming objects back (via a channel) from a go routine is far better than returning a potentially massive list of objects (as you are forced to do with most languages... or implement paging).
 
 <!-- A couple of binaries to save you the effort: [Mac](https://github.com/joncrlsn/pgdiff/raw/master/bin-osx/pgdiff "OSX version") -->
 
 ## usage
 
-	pgdiff [database flags] 
+	pgdiff [database flags] &lt;schemaType&gt;
 
 
  program flags | Explanation 
@@ -25,3 +25,5 @@ I'm a big fan of GoLang because of how easy it is to deliver a single executable
   -h2          | second db host -- default is localhost
   -p2          | second db port number.  defaults to 5432
   -d2          | second db name
+
+&lt;schemaType&gt; the type of objects in the schema to compare: TABLE, COLUMN, FOREIGN_KEY (soon: CONSTRAINT, ROLE)
