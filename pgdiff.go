@@ -108,9 +108,10 @@ func doDiff(db1 Schema, db2 Schema) {
 }
 
 func usage() {
-	fmt.Fprintf(os.Stderr, "usage: %s [database flags] <genType> <tableName> <whereClause> \n", os.Args[0])
+	fmt.Fprintf(os.Stderr, "usage: %s [database flags] <schemaType> \n", os.Args[0])
 	fmt.Fprintln(os.Stderr, `
-Copies table data as either INSERT or UPDATE statements.
+Compares the schema between two PostgreSQL databases and generates alter statements 
+to be *manually* run against the second database.
 
 [database flags]: (optional)
   -U1     : postgres user (matches psql flag)
@@ -124,14 +125,7 @@ Copies table data as either INSERT or UPDATE statements.
   -d2     : database name (matches psql flag)
   -pw2    : password for the postgres user (otherwise you'll be prompted)
 
-<genType>     : type of SQL to generate: insert, update
-
-Database connection information can be specified in two ways:
-  * Environment variables
-  * Program flags (overrides environment variables.  See above)
-  * ~/.pgpass file (for the password)
-  * Note that if password is not specified, you will be prompted.
-
+<schemaTpe> : type of schema to check: TABLE, COLUMN, FOREIGN_KEY (soon: CONSTRAINT, ROLE)
 `)
 
 	os.Exit(2)

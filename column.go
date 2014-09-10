@@ -68,7 +68,7 @@ func (c ColumnSchema) Drop() {
 func (c ColumnSchema) Change(obj interface{}) {
 	c2, ok := obj.(*ColumnSchema)
 	if !ok {
-		fmt.Println("Error!!!, change needs a ColumnSchema instance", c2)
+		fmt.Println("Error!!!, ColumnSchema.Change(obj) needs a ColumnSchema instance", c2)
 	}
 
 	// Detect column type change (mostly varchar length, or number size increase)  (integer to/from bigint is OK)
@@ -94,39 +94,17 @@ func (c ColumnSchema) Change(obj interface{}) {
 			fmt.Printf("ALTER TABLE %s ALTER COLUMN %s DROP DEFAULT;\n", c.row["table_name"], c.row["column_name"])
 		}
 	} else if c.row["column_default"] != c2.row["column_default"] {
-		fmt.Printf("ALTER TABLE %s ALTER COLUMN %s DEFAULT %s;\n", c.row["table_name"], c.row["column_name"], c.row["column_default"])
-	}
-
-	if c.row["is_nullable"] != c2.row["is_nullable"] {
-		if c.row["is_nullable"] == "YES" {
-			fmt.Printf("ALTER TABLE %s ALTER COLUMN DROP NOT NULL")
-		} else {
-			fmt.Printf("ALTER TABLE %s ALTER COLUMN SET NOT NULL")
-		}
+		fmt.Printf("ALTER TABLE %s ALTER COLUMN %s SET DEFAULT %s;\n", c.row["table_name"], c.row["column_name"], c.row["column_default"])
 	}
 
 	// TODO Detect not-null and nullable change
-
-	//	// if changing type
-	//	if c.row["data_type"] == "character varying" {
-	//		// varchar needs a length specified
-	//		fmt.Printf("ALTER TABLE %s ALTER COLUMN %s TYPE %s(%s);\n", c.row["table_name"], c.row["column_name"], c.row["data_type"], c.row["character_maximum_length"])
-	//	} else {
-	//		fmt.Printf("ALTER TABLE %s ALTER COLUMN %s TYPE %s;\n", c.row["table_name"], c.row["column_name"], c.row["data_type"])
-	//	}
-	//
-	//	// if changing/adding default value
-	//	fmt.Printf("ALTER TABLE %s ALTER COLUMN %s SET DEFAULT %s;\n", c.row["table_name"], c.row["column_name"], c.row["column_default"])
-	//
-	//	// if dropping default value
-	//	fmt.Printf("ALTER TABLE %s ALTER COLUMN %s DROP DEFAULT;\n", c.row["table_name"], c.row["column_name"])
-	//
-	//	// if adding not null
-	//	fmt.Printf("ALTER TABLE %s ALTER COLUMN %s SET NOT NULL;\n", c.row["table_name"], c.row["column_name"])
-	//
-	//	// if dropping not null
-	//	fmt.Printf("ALTER TABLE %s ALTER COLUMN %s DROP NOT NULL;\n", c.row["table_name"], c.row["column_name"])
-	//	return "Change"
+	if c.row["is_nullable"] != c2.row["is_nullable"] {
+		if c.row["is_nullable"] == "YES" {
+			fmt.Printf("ALTER TABLE %s ALTER COLUMN %s DROP NOT NULL;\n", c.row["table_name"], c.row["column_name"])
+		} else {
+			fmt.Printf("ALTER TABLE %s ALTER COLUMN %s SET NOT NULL;\n", c.row["table_name"], c.row["column_name"])
+		}
+	}
 }
 
 /*
