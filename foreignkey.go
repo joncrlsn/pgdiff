@@ -1,25 +1,26 @@
 package main
 
 import "fmt"
+import "database/sql"
+import "github.com/joncrlsn/pgutil"
 
-// ForeignKeySchema holds a channel streaming foreign key data from one of the databases as well as 
+// ForeignKeySchema holds a channel streaming foreign key data from one of the databases as well as
 // a reference to the current row of data we're viewing.
 //
 // ForeignKeySchema implements the Schema interface defined in pgdiff.go
 type ForeignKeySchema struct {
 	channel chan map[string]string
 	row     map[string]string
+	done    bool
 }
 
-// NextRow reads from the channel and tells you if you are at the end or not
-func (c *ForeignKeySchema) NextRow(more bool) bool {
+// NextRow reads from the channel and tells you if there are (probably) more or not
+func (c *ForeignKeySchema) NextRow() bool {
 	c.row = <-c.channel
-	//fmt.Println("Found ", c.row["table_name"])
-
-	if !more || len(c.row) == 0 {
-		return false
+	if len(c.row) == 0 {
+		c.done = true
 	}
-	return true
+	return !c.done
 }
 
 // Compare tells you, in one pass, whether or not the first row matches, is less than, or greater than the second row
@@ -57,4 +58,34 @@ func (c ForeignKeySchema) Change(obj interface{}) {
 		fmt.Println("Error!!!, change needs a ForeignKeySchema instance", c2)
 	}
 	//fmt.Printf("Change Table? %s - %s\n", c.row["table_name"], c2.row["table_name"])
+}
+
+/*
+ * Compare the columns in the two databases
+ */
+func compareForeignKeys(conn1 *sql.DB, conn2 *sql.DB) {
+	sql := `
+SELECT tc.constraint_name
+    , tc.table_name
+    , kcu.column_name
+    , ccu.table_name AS foreign_table_name
+    , ccu.column_name AS foreign_column_name
+FROM
+    information_schema.table_constraints AS tc
+    JOIN information_schema.key_column_usage AS kcu
+      ON tc.constraint_name = kcu.constraint_name
+    JOIN information_schema.constraint_column_usage AS ccu
+      ON ccu.constraint_name = tc.constraint_name
+WHERE constraint_type = 'FOREIGN KEY' 
+ORDER BY tc.table_name, tc.constraint_name; `
+
+	rowChan1, _ := pgutil.QueryStrings(conn1, sql)
+	rowChan2, _ := pgutil.QueryStrings(conn2, sql)
+
+	// We have to explicitly type this as Schema for some reason
+	var schema1 Schema = &ForeignKeySchema{channel: rowChan1}
+	var schema2 Schema = &ForeignKeySchema{channel: rowChan2}
+
+	// Compare the columns
+	doDiff(schema1, schema2)
 }

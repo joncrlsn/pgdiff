@@ -1,7 +1,8 @@
 package main
 
 import "fmt"
-
+import "database/sql"
+import "github.com/joncrlsn/pgutil"
 
 // ColumnSchema holds a channel streaming column data from one of the databases as well as
 // a reference to the current row of data we're viewing.
@@ -10,15 +11,16 @@ import "fmt"
 type ColumnSchema struct {
 	channel chan map[string]string
 	row     map[string]string
+	done    bool
 }
 
-// NextRow reads from the channel and tells you whether or not there might be more rows
-func (c *ColumnSchema) NextRow(more bool) bool {
+// NextRow reads from the channel and tells you if there are (probably) more or not
+func (c *ColumnSchema) NextRow() bool {
 	c.row = <-c.channel
-	if !more || len(c.row) == 0 {
-		return false
+	if len(c.row) == 0 {
+		c.done = true
 	}
-	return true
+	return !c.done
 }
 
 // Compare tells you, in one pass, whether or not the first row matches, is less than, or greater than the second row
@@ -68,7 +70,43 @@ func (c ColumnSchema) Change(obj interface{}) {
 	if !ok {
 		fmt.Println("Error!!!, change needs a ColumnSchema instance", c2)
 	}
-	//    fmt.Printf("Changes? ")
+
+	// Detect column type change (mostly varchar length, or number size increase)  (integer to/from bigint is OK)
+	if c.row["data_type"] == c2.row["data_type"] {
+		if c.row["data_type"] == "character varying" {
+			if c.row["character_maximum_length"] != c2.row["character_maximum_length"] {
+				if c.row["character_maximum_length"] < c2.row["character_maximum_length"] {
+					fmt.Println("-- WARNING: The next statement will shorten a character varying column.")
+				}
+				fmt.Printf("ALTER TABLE %s ALTER COLUMN %s TYPE character varying(%s);\n", c.row["table_name"], c.row["column_name"], c.row["character_maximum_length"])
+			}
+		}
+	}
+
+	// TODO: Code and test a column change from integer to bigint
+	if c.row["data_type"] != c2.row["data_type"] {
+		fmt.Printf("-- WARNING: This program does not (yet) handle type changes (%s to %s).\n", c2.row["data_type"], c.row["data_type"])
+	}
+
+	// Detect column default change (or added, dropped)
+	if c.row["column_default"] == "null" {
+		if c.row["column_default"] != "null" {
+			fmt.Printf("ALTER TABLE %s ALTER COLUMN %s DROP DEFAULT;\n", c.row["table_name"], c.row["column_name"])
+		}
+	} else if c.row["column_default"] != c2.row["column_default"] {
+		fmt.Printf("ALTER TABLE %s ALTER COLUMN %s DEFAULT %s;\n", c.row["table_name"], c.row["column_name"], c.row["column_default"])
+	}
+
+	if c.row["is_nullable"] != c2.row["is_nullable"] {
+		if c.row["is_nullable"] == "YES" {
+			fmt.Printf("ALTER TABLE %s ALTER COLUMN DROP NOT NULL")
+		} else {
+			fmt.Printf("ALTER TABLE %s ALTER COLUMN SET NOT NULL")
+		}
+	}
+
+	// TODO Detect not-null and nullable change
+
 	//	// if changing type
 	//	if c.row["data_type"] == "character varying" {
 	//		// varchar needs a length specified
@@ -89,4 +127,30 @@ func (c ColumnSchema) Change(obj interface{}) {
 	//	// if dropping not null
 	//	fmt.Printf("ALTER TABLE %s ALTER COLUMN %s DROP NOT NULL;\n", c.row["table_name"], c.row["column_name"])
 	//	return "Change"
+}
+
+/*
+ * Compare the columns in the two databases
+ */
+func compareColumns(conn1 *sql.DB, conn2 *sql.DB) {
+	sql := `
+SELECT table_name
+    , column_name
+    , data_type
+    , is_nullable
+    , column_default
+    , character_maximum_length
+FROM information_schema.columns 
+WHERE table_schema = 'public' 
+ORDER by table_name, column_name;`
+
+	rowChan1, _ := pgutil.QueryStrings(conn1, sql)
+	rowChan2, _ := pgutil.QueryStrings(conn2, sql)
+
+	// We have to explicitly type this as Schema for some reason
+	var schema1 Schema = &ColumnSchema{channel: rowChan1}
+	var schema2 Schema = &ColumnSchema{channel: rowChan2}
+
+	// Compare the columns
+	doDiff(schema1, schema2)
 }
