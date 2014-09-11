@@ -55,9 +55,7 @@ func (c TableSchema) Change(obj interface{}) {
 	//fmt.Printf("Change Table? %s - %s\n", c.row["table_name"], c2.row["table_name"])
 }
 
-/*
- * Compare the tables in the two databases
- */
+// compareTables outputs SQL to make the table names match between DBs
 func compareTables(conn1 *sql.DB, conn2 *sql.DB) {
 	sql := `
 SELECT table_name
@@ -65,6 +63,7 @@ SELECT table_name
     , is_insertable_into
 FROM information_schema.tables 
 WHERE table_schema = 'public' 
+AND table_type = 'BASE TABLE'
 ORDER by table_name;`
 
 	rowChan1, _ := pgutil.QueryStrings(conn1, sql)
