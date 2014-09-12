@@ -38,7 +38,7 @@ func (c *TableSchema) Compare(obj interface{}) int {
 
 // Add returns SQL to add the table
 func (c TableSchema) Add() {
-	fmt.Printf("CREATE TABLE %s;\n", c.row["table_name"])
+	fmt.Printf("CREATE TABLE %s();\n", c.row["table_name"])
 }
 
 // Drop returns SQL to drop the table
@@ -64,7 +64,7 @@ SELECT table_name
 FROM information_schema.tables 
 WHERE table_schema = 'public' 
 AND table_type = 'BASE TABLE'
-ORDER by table_name;`
+ORDER BY table_name ASC;`
 
 	rowChan1, _ := pgutil.QueryStrings(conn1, sql)
 	rowChan2, _ := pgutil.QueryStrings(conn2, sql)

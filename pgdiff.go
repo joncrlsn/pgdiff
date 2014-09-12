@@ -54,10 +54,12 @@ func main() {
 	conn2, err := dbInfo2.Open()
 	check("opening database", err)
 
-	// This section will be improved so that you do not need to choose the type
+	// This section needs to be improved so that you do not need to choose the type
 	// of alter statements to generate.  Rather, all should be generated in the
 	// proper order.
-	if schemaType == "TABLE" {
+	if schemaType == "SEQUENCE" {
+		compareSequences(conn1, conn2)
+	} else if schemaType == "TABLE" {
 		compareTables(conn1, conn2)
 	} else if schemaType == "COLUMN" {
 		compareColumns(conn1, conn2)

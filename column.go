@@ -44,7 +44,12 @@ func (c ColumnSchema) Compare(obj interface{}) int {
 // Add returns SQL to add the column
 func (c ColumnSchema) Add() {
 	if c.row["data_type"] == "character varying" {
-		fmt.Printf("ALTER TABLE %s ADD COLUMN %s %s(%s)", c.row["table_name"], c.row["column_name"], c.row["data_type"], c.row["character_maximum_length"])
+		maxLength := c.row["character_maximum_length"]
+		if maxLength == "null" {
+			fmt.Println("-- WARNING: varchar column has no maximum length.  Setting to 1024")
+			maxLength = "1024"
+		}
+		fmt.Printf("ALTER TABLE %s ADD COLUMN %s %s(%s)", c.row["table_name"], c.row["column_name"], c.row["data_type"], maxLength)
 	} else {
 		fmt.Printf("ALTER TABLE %s ADD COLUMN %s %s", c.row["table_name"], c.row["column_name"], c.row["data_type"])
 	}
@@ -78,7 +83,12 @@ func (c ColumnSchema) Change(obj interface{}) {
 				if c.row["character_maximum_length"] < c2.row["character_maximum_length"] {
 					fmt.Println("-- WARNING: The next statement will shorten a character varying column.")
 				}
-				fmt.Printf("ALTER TABLE %s ALTER COLUMN %s TYPE character varying(%s);\n", c.row["table_name"], c.row["column_name"], c.row["character_maximum_length"])
+				maxLength := c.row["character_maximum_length"]
+				if maxLength == "null" {
+					fmt.Println("-- WARNING: varchar column has no maximum length.  Setting to 1024")
+					maxLength = "1024"
+				}
+				fmt.Printf("ALTER TABLE %s ALTER COLUMN %s TYPE character varying(%s);\n", c.row["table_name"], c.row["column_name"], maxLength)
 			}
 		}
 	}
@@ -119,7 +129,8 @@ SELECT table_name
     , column_default
     , character_maximum_length
 FROM information_schema.columns 
-WHERE table_schema = 'public' 
+WHERE table_schema = 'public'
+AND is_updatable = 'YES'
 ORDER by table_name, column_name;`
 
 	rowChan1, _ := pgutil.QueryStrings(conn1, sql)

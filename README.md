@@ -1,6 +1,6 @@
 # pgdiff - PostgreSQL schema diff
 
-Please note that this program never modifies any databases directly, and you are solely responsible for verifying the generated SQL *before* running it against your database.
+Please note that this program never modifies any database directly, and you are solely responsible for verifying the generated SQL *before* running it against your database.  Now that you know about that, it should give you confidence that it is safe to try out and see what SQL gets generated.
 
 Written in GoLang, this utility compares the schema between two PostgreSQL databases and generates alter statements to be *manually* run against the second database.  Not everything in the schema is compared, but the things considered important (at the moment) are: tables, columns (and their default values), foreign keys... and soon constraints and user roles. 
 
