@@ -64,7 +64,7 @@ SELECT table_name
 FROM information_schema.tables 
 WHERE table_schema = 'public' 
 AND table_type = 'BASE TABLE'
-ORDER BY table_name ASC;`
+ORDER BY table_name COLLATE "C" ASC;`
 
 	rowChan1, _ := pgutil.QueryStrings(conn1, sql)
 	rowChan2, _ := pgutil.QueryStrings(conn2, sql)

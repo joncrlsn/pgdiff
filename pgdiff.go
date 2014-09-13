@@ -36,7 +36,7 @@ func init() {
 	// Remaining args:
 	args = flag.Args()
 	if len(args) == 0 {
-		fmt.Println("The required first argument is SchemaType: TABLE, COLUMN, FOREIGN_KEY, CONSTRAINT, ROLE")
+		fmt.Println("The required first argument is SchemaType: SEQUENCE, TABLE, COLUMN, CONSTRAINT, ROLE")
 		os.Exit(1)
 	}
 
@@ -57,12 +57,23 @@ func main() {
 	// This section needs to be improved so that you do not need to choose the type
 	// of alter statements to generate.  Rather, all should be generated in the
 	// proper order.
-	if schemaType == "SEQUENCE" {
+	if schemaType == "ALL" {
+		compareSequences(conn1, conn2)
+		compareTables(conn1, conn2)
+		compareColumns(conn1, conn2)
+		comparePrimaryKeys(conn1, conn2)
+		compareUniqueConstraints(conn1, conn2)
+		compareForeignKeys(conn1, conn2)
+	} else if schemaType == "SEQUENCE" {
 		compareSequences(conn1, conn2)
 	} else if schemaType == "TABLE" {
 		compareTables(conn1, conn2)
 	} else if schemaType == "COLUMN" {
 		compareColumns(conn1, conn2)
+	} else if schemaType == "PRIMARY_KEY" {
+		comparePrimaryKeys(conn1, conn2)
+	} else if schemaType == "UNIQUE" {
+		compareUniqueConstraints(conn1, conn2)
 	} else if schemaType == "FOREIGN_KEY" {
 		compareForeignKeys(conn1, conn2)
 	} else {

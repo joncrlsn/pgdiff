@@ -2,7 +2,7 @@
 
 Please note that this program never modifies any database directly, and you are solely responsible for verifying the generated SQL *before* running it against your database.  Now that you know about that, it should give you confidence that it is safe to try out and see what SQL gets generated.
 
-Written in GoLang, this utility compares the schema between two PostgreSQL databases and generates alter statements to be *manually* run against the second database.  Not everything in the schema is compared, but the things considered important (at the moment) are: tables, columns (and their default values), foreign keys... and soon constraints and user roles. 
+Written in GoLang, this utility compares the schema between two PostgreSQL databases and generates alter statements to be *manually* run against the second database.  Not everything in the schema is compared, but the things considered important (at the moment) are: sequences, tables, columns (and their default values), primary keys, unique constraints, foreign keys... and soon indexes and user roles. 
 
 It is written to be easy to add and improve the accuracy of the diff.  Please let me know if you think this goal has not been met.  I'm very interested in suggestions and contributions to improve this program.  I'm not a GoLang expert yet, but each program I write gets me closer to that goal.
 
@@ -12,7 +12,7 @@ I'm a big fan of GoLang because of how easy it is to deliver a single executable
 
 ## usage
 
-	pgdiff [database flags] &lt;schemaType&gt;
+	pgdiff [database flags] <schemaType>
 
 
  program flags | Explanation 
@@ -28,4 +28,4 @@ I'm a big fan of GoLang because of how easy it is to deliver a single executable
   -p2          | second db port number.  defaults to 5432
   -d2          | second db name
 
-&lt;schemaType&gt; the type of objects in the schema to compare: TABLE, COLUMN, FOREIGN_KEY (soon: CONSTRAINT, ROLE)
+&lt;schemaType&gt; the type of objects in the schema to compare: ALL, SEQUENCE, TABLE, COLUMN, PRIMARY_KEY, UNIQUE, FOREIGN_KEY (soon: INDEX, ROLE)

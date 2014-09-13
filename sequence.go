@@ -62,7 +62,7 @@ SELECT sequence_name, data_type, start_value
 	, increment, cycle_option 
 FROM information_schema.sequences
 WHERE sequence_schema = 'public'
-ORDER BY sequence_name ASC;`
+ORDER BY sequence_name COLLATE "C" ASC;`
 
 	rowChan1, _ := pgutil.QueryStrings(conn1, sql)
 	rowChan2, _ := pgutil.QueryStrings(conn2, sql)

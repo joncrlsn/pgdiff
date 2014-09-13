@@ -82,7 +82,7 @@ FROM information_schema.table_constraints AS tc
       AND tc.constraint_schema = rc.constraint_schema
       AND tc.constraint_name = rc.constraint_name)
 WHERE tc.constraint_type = 'FOREIGN KEY' 
-ORDER BY tc.table_name, tc.constraint_name; `
+ORDER BY tc.table_name, tc.constraint_name COLLATE "C" ASC; `
 
 	rowChan1, _ := pgutil.QueryStrings(conn1, sql)
 	rowChan2, _ := pgutil.QueryStrings(conn2, sql)

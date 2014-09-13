@@ -131,7 +131,7 @@ SELECT table_name
 FROM information_schema.columns 
 WHERE table_schema = 'public'
 AND is_updatable = 'YES'
-ORDER by table_name, column_name;`
+ORDER by table_name, column_name COLLATE "C" ASC;`
 
 	rowChan1, _ := pgutil.QueryStrings(conn1, sql)
 	rowChan2, _ := pgutil.QueryStrings(conn2, sql)
