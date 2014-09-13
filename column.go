@@ -1,6 +1,7 @@
 package main
 
 import "fmt"
+import "strconv"
 import "database/sql"
 import "github.com/joncrlsn/pgutil"
 
@@ -80,8 +81,16 @@ func (c ColumnSchema) Change(obj interface{}) {
 	if c.row["data_type"] == c2.row["data_type"] {
 		if c.row["data_type"] == "character varying" {
 			if c.row["character_maximum_length"] != c2.row["character_maximum_length"] {
-				if c.row["character_maximum_length"] < c2.row["character_maximum_length"] {
-					fmt.Println("-- WARNING: The next statement will shorten a character varying column.")
+				max1 := c.row["character_maximum_length"]
+				max2 := c2.row["character_maximum_length"]
+				if max1 != "null" && max2 != "null" {
+					cMax, err1 := strconv.Atoi(max1)
+					check("converting string to int", err1)
+					c2Max, err2 := strconv.Atoi(max2)
+					check("converting string to int", err2)
+					if cMax < c2Max {
+						fmt.Println("-- WARNING: The next statement will shorten a character varying column.")
+					}
 				}
 				maxLength := c.row["character_maximum_length"]
 				if maxLength == "null" {
@@ -95,7 +104,8 @@ func (c ColumnSchema) Change(obj interface{}) {
 
 	// TODO: Code and test a column change from integer to bigint
 	if c.row["data_type"] != c2.row["data_type"] {
-		fmt.Printf("-- WARNING: This program does not (yet) handle type changes (%s to %s).\n", c2.row["data_type"], c.row["data_type"])
+		fmt.Printf("-- WARNING: This type change may not work well: (%s to %s).\n", c2.row["data_type"], c.row["data_type"])
+		fmt.Printf("ALTER TABLE %s ALTER COLUMN %s TYPE %s;\n", c.row["table_name"], c.row["column_name"], c.row["data_type"])
 	}
 
 	// Detect column default change (or added, dropped)
