@@ -82,7 +82,35 @@ FROM information_schema.table_constraints AS tc
       AND tc.constraint_schema = rc.constraint_schema
       AND tc.constraint_name = rc.constraint_name)
 WHERE tc.constraint_type = 'FOREIGN KEY' 
-ORDER BY tc.table_name, tc.constraint_name COLLATE "C" ASC; `
+ORDER BY tc.table_name, tc.constraint_name COLLATE "C" ASC; 
+
+
+-- Foreign Keys
+--SELECT
+--    con.relname AS child_table,
+--    att2.attname AS child_column, 
+--    cl.relname AS parent_table, 
+--    att.attname AS parent_column
+--FROM
+--   (SELECT 
+--        unnest(con1.conkey) AS parent, 
+--        unnest(con1.confkey) AS child, 
+--        cl.relname,
+--        con1.confrelid, 
+--        con1.conrelid
+--    FROM pg_class AS cl
+--    JOIN pg_namespace AS ns ON (cl.relnamespace = ns.oid)
+--    JOIN pg_constraint AS con1 ON (con1.conrelid = cl.oid)
+--    WHERE con1.contype = 'f'
+--    --AND cl.relname = 't_org'
+--    --AND ns.nspname = 'child_schema'
+--   ) con
+--JOIN pg_attribute AS att ON (att.attrelid = con.confrelid AND att.attnum = con.child)
+--JOIN pg_class AS cl ON (cl.oid = con.confrelid)
+--JOIN pg_attribute AS att2 ON (att2.attrelid = con.conrelid AND att2.attnum = con.parent)
+--ORDER BY con.relname, att2.attname;
+
+`
 
 	rowChan1, _ := pgutil.QueryStrings(conn1, sql)
 	rowChan2, _ := pgutil.QueryStrings(conn2, sql)
