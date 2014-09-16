@@ -74,6 +74,8 @@ func main() {
 		comparePrimaryKeys(conn1, conn2)
 	} else if schemaType == "UNIQUE" {
 		compareUniqueConstraints(conn1, conn2)
+	} else if schemaType == "INDEX" {
+		compareIndexes(conn1, conn2)
 	} else if schemaType == "FOREIGN_KEY" {
 		compareForeignKeys(conn1, conn2)
 	} else {
