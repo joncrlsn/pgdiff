@@ -31,7 +31,11 @@ func (c *PrimaryKeySchema) Compare(obj interface{}) int {
 		return +999
 	}
 	val := _compareString(c.row["table_name"], c2.row["table_name"])
-	return val
+	if val != 0 {
+		return val
+	}
+
+	return _compareString(c.row["constraint_name"], c2.row["constraint_name"])
 }
 
 // Add returns SQL to add the primary key
