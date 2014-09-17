@@ -52,7 +52,7 @@ func (c IndexSchema) Add() {
 
 // Drop generates SQL to drop the index
 func (c IndexSchema) Drop() {
-	fmt.Printf("DROP INDEX %s;\n", c.row["index_name"])
+	fmt.Printf("DROP INDEX %s; -- %s ON (%s)\n", c.row["index_name"], c.row["table_name"], c.row["column_names"])
 }
 
 // Change handles the case where the table and index name match, but the details do not

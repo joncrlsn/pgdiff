@@ -2,6 +2,7 @@ package main
 
 import "fmt"
 import "strconv"
+import "strings"
 import "database/sql"
 import "github.com/joncrlsn/pgutil"
 
@@ -45,10 +46,9 @@ func (c ColumnSchema) Compare(obj interface{}) int {
 // Add returns SQL to add the column
 func (c ColumnSchema) Add() {
 	if c.row["data_type"] == "character varying" {
-		maxLength := c.row["character_maximum_length"]
-		if maxLength == "null" {
-			fmt.Println("-- WARNING: varchar column has no maximum length.  Setting to 1024")
-			maxLength = "1024"
+		maxLength, valid := getMaxLength(c.row["character_maximum_length"])
+		if !valid {
+			fmt.Println("-- WARNING: varchar column has no maximum length.  Set to 1024")
 		}
 		fmt.Printf("ALTER TABLE %s ADD COLUMN %s %s(%s)", c.row["table_name"], c.row["column_name"], c.row["data_type"], maxLength)
 	} else {
@@ -80,24 +80,20 @@ func (c ColumnSchema) Change(obj interface{}) {
 	// Detect column type change (mostly varchar length, or number size increase)  (integer to/from bigint is OK)
 	if c.row["data_type"] == c2.row["data_type"] {
 		if c.row["data_type"] == "character varying" {
-			if c.row["character_maximum_length"] != c2.row["character_maximum_length"] {
-				max1 := c.row["character_maximum_length"]
-				max2 := c2.row["character_maximum_length"]
-				if max1 != "null" && max2 != "null" {
-					cMax, err1 := strconv.Atoi(max1)
-					check("converting string to int", err1)
-					c2Max, err2 := strconv.Atoi(max2)
-					check("converting string to int", err2)
-					if cMax < c2Max {
-						fmt.Println("-- WARNING: The next statement will shorten a character varying column.")
-					}
-				}
-				maxLength := c.row["character_maximum_length"]
-				if maxLength == "null" {
+			max1, max1Valid := getMaxLength(c.row["character_maximum_length"])
+			max2, max2Valid := getMaxLength(c2.row["character_maximum_length"])
+			if (max1Valid || !max2Valid) && (max1 != c2.row["character_maximum_length"]) {
+				if !max1Valid {
 					fmt.Println("-- WARNING: varchar column has no maximum length.  Setting to 1024")
-					maxLength = "1024"
 				}
-				fmt.Printf("ALTER TABLE %s ALTER COLUMN %s TYPE character varying(%s);\n", c.row["table_name"], c.row["column_name"], maxLength)
+				max1Int, err1 := strconv.Atoi(max1)
+				check("converting string to int", err1)
+				max2Int, err2 := strconv.Atoi(max2)
+				check("converting string to int", err2)
+				if max1Int < max2Int {
+					fmt.Println("-- WARNING: The next statement will shorten a character varying column.")
+				}
+				fmt.Printf("ALTER TABLE %s ALTER COLUMN %s TYPE character varying(%s);\n", c.row["table_name"], c.row["column_name"], max1)
 			}
 		}
 	}
@@ -105,7 +101,15 @@ func (c ColumnSchema) Change(obj interface{}) {
 	// TODO: Code and test a column change from integer to bigint
 	if c.row["data_type"] != c2.row["data_type"] {
 		fmt.Printf("-- WARNING: This type change may not work well: (%s to %s).\n", c2.row["data_type"], c.row["data_type"])
-		fmt.Printf("ALTER TABLE %s ALTER COLUMN %s TYPE %s;\n", c.row["table_name"], c.row["column_name"], c.row["data_type"])
+		if strings.HasPrefix(c.row["data_type"], "character") {
+			max1, max1Valid := getMaxLength(c.row["character_maximum_length"])
+			if !max1Valid {
+				fmt.Println("-- WARNING: varchar column has no maximum length.  Setting to 1024")
+			}
+			fmt.Printf("ALTER TABLE %s ALTER COLUMN %s TYPE %s(%s);\n", c.row["table_name"], c.row["column_name"], c.row["data_type"], max1)
+		} else {
+			fmt.Printf("ALTER TABLE %s ALTER COLUMN %s TYPE %s;\n", c.row["table_name"], c.row["column_name"], c.row["data_type"])
+		}
 	}
 
 	// Detect column default change (or added, dropped)
@@ -152,4 +156,13 @@ ORDER by table_name, column_name COLLATE "C" ASC;`
 
 	// Compare the columns
 	doDiff(schema1, schema2)
+}
+
+// getMaxLength returns the maximum length and whether or not it is valie
+func getMaxLength(maxLength string) (string, bool) {
+
+	if maxLength == "null" {
+		return "1024", false
+	}
+	return maxLength, true
 }

@@ -34,20 +34,18 @@ func (c *UniqueSchema) Compare(obj interface{}) int {
 	if val != 0 {
 		return val
 	}
-	val = _compareString(c.row["constraint_name"], c2.row["constraint_name"])
+	val = _compareString(c.row["constraint_def"], c2.row["constraint_def"])
 	return val
 }
 
-// Add returns SQL to add the primary key
+// Add returns SQL to add the unique constraint
 func (c UniqueSchema) Add() {
-	// ALTER TABLE ONLY t_product ADD CONSTRAINT t_product_pkey PRIMARY KEY (product_id, seq_no);
-	// ALTER TABLE ONLY t_product ADD CONSTRAINT t_product_pkey UNIQUE (product_id);
-	fmt.Printf("ALTER TABLE %s ADD CONSTRAINT %s UNIQUE (%s);\n", c.row["table_name"], c.row["constraint_name"], c.uniqueColumnString())
+	fmt.Printf("ALTER TABLE %s ADD CONSTRAINT %s %s;\n", c.row["table_name"], c.row["constraint_name"], c.row["constraint_def"])
 }
 
-// Drop returns SQL to drop the foreign key
+// Drop returns SQL to drop the unique constraint
 func (c UniqueSchema) Drop() {
-	fmt.Printf("ALTER TABLE %s DROP CONSTRAINT IF EXISTS %s;\n", c.row["table_name"], c.row["constraint_name"])
+	fmt.Printf("ALTER TABLE %s DROP CONSTRAINT %s; -- %s\n", c.row["table_name"], c.row["constraint_name"], c.row["constraint_def"])
 }
 
 // Change handles the case where the table name matches, but the details do not
@@ -56,54 +54,23 @@ func (c UniqueSchema) Change(obj interface{}) {
 	if !ok {
 		fmt.Println("Error!!!, change needs a UniqueSchema instance", c2)
 	}
-	pk1 := c.uniqueColumnString()
-	pk2 := c.uniqueColumnString()
-	if pk1 != pk2 {
-		fmt.Printf("-- Warning, primary key is different for table %s  pk1:%s  pk2:%s\n", c.row["table_name"], pk1, pk2)
-		fmt.Printf("ALTER TABLE %s DROP CONSTRAINT %s;\n", c.row["table_name"], c2.row["constraint_name"])
-		fmt.Printf("ALTER TABLE %s ADD CONSTRAINT %s UNIQUE (%s);\n", c.row["table_name"], c.row["constraint_name"], c.uniqueColumnString())
-	}
-}
-
-// uniqueColumnString concatenates the primary key column names into one string.
-// It's possible this could be done with SQL, I just haven't figured it out yet
-func (c UniqueSchema) uniqueColumnString() string {
-	pkey := ""
-	for i := 1; i <= 5; i++ {
-		colName := fmt.Sprintf("col%d", i)
-		col := c.row[colName]
-		//fmt.Printf("-- colName: %s  val:'%s'\n", colName, col)
-		if len(col) > 0 {
-			if len(pkey) > 0 {
-				pkey = pkey + ","
-			}
-			pkey = pkey + col
-		}
-	}
-	return pkey
+	// There is no "changing" a unique constraint.  It either gets created or dropped (or left as-is).
 }
 
 /*
- * Compare the primary keys in the two databases.  This SQL can handle up to 5 columns
- * as part of the primary key
+ * Compare the primary keys in the two databases.  We do not recreate unique if just the name is different.
  */
 func compareUniqueConstraints(conn1 *sql.DB, conn2 *sql.DB) {
 	sql := `
-SELECT tc.table_name
-	, kcu.constraint_name
-	, MAX(CASE WHEN kcu.ordinal_position = 1 THEN kcu.column_name ELSE '' END) AS col1
-	, MAX(CASE WHEN kcu.ordinal_position = 2 THEN kcu.column_name ELSE '' END) AS col2
-	, MAX(CASE WHEN kcu.ordinal_position = 3 THEN kcu.column_name ELSE '' END) AS col3
-	, MAX(CASE WHEN kcu.ordinal_position = 4 THEN kcu.column_name ELSE '' END) AS col4
-	, MAX(CASE WHEN kcu.ordinal_position = 5 THEN kcu.column_name ELSE '' END) AS col5
-FROM information_schema.table_constraints AS tc 
-LEFT JOIN information_schema.key_column_usage kcu
-       ON tc.constraint_catalog = kcu.constraint_catalog
-      AND tc.constraint_schema = kcu.constraint_schema
-      AND tc.constraint_name = kcu.constraint_name
-WHERE tc.constraint_type = 'UNIQUE'
-GROUP BY tc.table_name, kcu.constraint_name
-ORDER BY tc.table_name, kcu.constraint_name COLLATE "C" ASC;`
+SELECT c.conname AS constraint_name
+	, c.contype AS constraint_type
+	, cl.relname AS table_name
+	, pg_catalog.pg_get_constraintdef(c.oid, true) as constraint_def
+FROM pg_catalog.pg_constraint c
+INNER JOIN pg_class AS cl ON (c.conrelid = cl.oid)
+WHERE c.contype = 'u'
+ORDER BY cl.relname::varchar, pg_catalog.pg_get_constraintdef(c.oid, true) COLLATE "C" ASC;
+`
 
 	rowChan1, _ := pgutil.QueryStrings(conn1, sql)
 	rowChan2, _ := pgutil.QueryStrings(conn2, sql)
