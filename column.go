@@ -67,7 +67,7 @@ func (c ColumnSchema) Add() {
 // Drop returns SQL to drop the column
 func (c ColumnSchema) Drop() {
 	// if dropping column
-	fmt.Printf("ALTER TABLE %s DROP COLUMN %s;\n", c.row["table_name"], c.row["column_name"])
+	fmt.Printf("ALTER TABLE %s DROP COLUMN IF EXISTS %s;\n", c.row["table_name"], c.row["column_name"])
 }
 
 // Change handles the case where the table and column match, but the details do not

@@ -41,18 +41,37 @@ func (c *IndexSchema) Compare(obj interface{}) int {
 	return val
 }
 
-// Add generates SQL to add the index
+// Add generates SQL to add the constraint/index
 func (c IndexSchema) Add() {
-	uniqueStr := ""
-	if c.row["unique"] == "true" {
-		uniqueStr = "UNIQUE "
+
+	// Assertion
+	if c.row["index_def"] == "null" {
+		fmt.Printf("-- Unexpected situation in index.go: there is no index_def for %s %s\n", c.row["table_name"], c.row["index_name"])
+		return
 	}
-	fmt.Printf("CREATE %sINDEX %s ON %s (%s);\n", uniqueStr, c.row["index_name"], c.row["table_name"], c.row["column_names"])
+
+	// Create the index
+	fmt.Println(c.row["index_def"])
+	//fmt.Println("--", c.row["constraint_def"])
+	
+	if c.row["constraint_def"] != "null" {
+		// Create the constraint using the index we just created
+		if c.row["pk"] == "true" {
+			// Add primary key using the index
+			fmt.Printf("ALTER TABLE IF EXISTS ONLY %s ADD CONSTRAINT %s PRIMARY KEY USING INDEX %s;\n", c.row["table_name"], c.row["index_name"], c.row["index_name"])
+		} else if c.row["uq"] == "true" {
+			// Add unique constraint using the index
+			fmt.Printf("ALTER TABLE IF EXISTS ONLY %s ADD CONSTRAINT %s UNIQUE USING INDEX %s;\n", c.row["table_name"], c.row["index_name"], c.row["index_name"])
+		}
+	}
 }
 
-// Drop generates SQL to drop the index
+// Drop generates SQL to drop the index and/or the constraint related to it
 func (c IndexSchema) Drop() {
-	fmt.Printf("DROP INDEX %s; -- %s ON (%s)\n", c.row["index_name"], c.row["table_name"], c.row["column_names"])
+	if c.row["constraint_def"] != "null" {
+		fmt.Printf("ALTER TABLE IF EXISTS ONLY %s DROP CONSTRAINT IF EXISTS %s; -- %s\n", c.row["table_name"], c.row["index_name"], c.row["constraint_def"])
+	}
+	fmt.Printf("DROP INDEX IF EXISTS %s; -- %s \n", c.row["index_name"], c.row["index_def"])
 }
 
 // Change handles the case where the table and index name match, but the details do not
@@ -61,33 +80,86 @@ func (c IndexSchema) Change(obj interface{}) {
 	if !ok {
 		fmt.Println("Error!!!, change needs an IndexSchema instance", c2)
 	}
-	// No need to do anything, we either drop or add indices
+	// Table and constraint name matches... We need to make sure the details match
+
+	// NOTE that there should always be an index_def for both c and c2 (but we're checking below anyway)
+	if len(c.row["index_def"]) == 0 {
+		fmt.Printf("-- Unexpected situation in index.go: index_def is empty for %v\n", c.row)
+		return
+	}
+	if len(c2.row["index_def"]) == 0 {
+		fmt.Printf("-- Unexpected situation in index.go: index_def is empty for %v\n", c2.row)
+		return
+	}
+
+	if c.row["constraint_def"] != c2.row["constraint_def"] {
+		// c1.constraint and c2.constraint are just different
+		if c.row["constraint_def"] == "null" {
+			// c1.constraint does not exist, c2.constraint does, so
+			// Drop constraint
+			fmt.Printf("DROP INDEX IF EXISTS %s; -- %s \n", c2.row["index_name"], c2.row["index_def"])
+		} else if c2.row["constraint_def"] == "null" {
+			// c1.constraint exists, c2.constraint does not, so
+			// Add constraint
+			if c.row["index_def"] == c2.row["index_def"] {
+				// Indexes match, so
+				// Add constraint using the index
+				if c.row["pk"] == "true" {
+					// Add primary key using the index
+					fmt.Printf("ALTER TABLE %s ADD CONSTRAINT %s PRIMARY KEY USING INDEX %s;\n", c.row["table_name"], c.row["index_name"], c.row["index_name"])
+				} else if c.row["uq"] == "true" {
+					// Add unique constraint using the index
+					fmt.Printf("ALTER TABLE %s ADD CONSTRAINT %s UNIQUE USING INDEX %s;\n", c.row["table_name"], c.row["index_name"], c.row["index_name"])
+				} else {
+
+				}
+			} else {
+				// Drop the c2 index, create a copy of the c1 index
+				fmt.Printf("DROP INDEX IF EXISTS %s; -- %s \n", c2.row["index_name"], c2.row["index_def"])
+
+			}
+			fmt.Printf("ALTER TABLE %s ADD CONSTRAINT %s %s;\n", c.row["table_name"], c.row["constraint_name"], c.row["constraint_def"])
+
+		} else if c.row["index_def"] != c2.row["index_def"] {
+			// The constraints match
+		}
+
+	} else if c.row["index_def"] != c2.row["index_def"] {
+		// Remember, if we are here, then the two constraint_defs match (both may be empty)
+		// The indexes do not match, but the constraints do
+
+		// Drop the index (and maybe the constraint) so we can recreate the index
+		c.Drop()
+
+		// Recreate the index (and a constraint if specified)
+		c.Add()
+	}
+
 }
 
 /*
- * Compare the columns in the two databases
+ * Compare the indexes in the two databases
  */
 func compareIndexes(conn1 *sql.DB, conn2 *sql.DB) {
+	// This SQL was generated with psql -E -c "\d t_org"
+	// The magic is in pg_get_indexdef and pg_get_constraint
 	sql := `
-SELECT
-    t.relname AS table_name,
-    i.relname AS index_name,
-    ix.indisunique AS unique,
-    array_to_string(array_agg(a.attname), ', ') AS column_names
-FROM
-    pg_index AS ix,
-    pg_class AS t,
-    pg_class AS i,
-    pg_attribute AS a
-WHERE
-    t.oid = ix.indrelid
-    AND i.oid = ix.indexrelid
-    AND a.attrelid = t.oid
-    AND a.attnum = ANY(ix.indkey)
-    AND t.relkind = 'r'
-    AND t.relname not like 'pg_%'
-GROUP BY t.relname, i.relname, ix.indisunique
-ORDER BY t.relname, i.relname, ix.indisunique ASC;`
+SELECT c.relname AS table_name
+    , c2.relname AS index_name
+    , i.indisprimary AS pk
+    , i.indisunique AS uq
+    , pg_catalog.pg_get_indexdef(i.indexrelid, 0, true) AS index_def
+    , pg_catalog.pg_get_constraintdef(con.oid, true) AS constraint_def
+    , con.contype AS typ
+FROM pg_catalog.pg_index AS i
+JOIN pg_catalog.pg_class AS c ON (c.oid = i.indrelid)
+JOIN pg_catalog.pg_class AS c2 ON (c2.oid = i.indexrelid) 
+LEFT JOIN pg_catalog.pg_constraint con 
+    ON (con.conrelid = i.indrelid AND con.conindid = i.indexrelid AND con.contype IN ('p','u','x'))
+WHERE c.relname NOT LIKE 'pg_%'
+--AND c.relname = 't_org' 
+ORDER BY c.relname, c2.relname;
+`
 
 	rowChan1, _ := pgutil.QueryStrings(conn1, sql)
 	rowChan2, _ := pgutil.QueryStrings(conn2, sql)

@@ -61,8 +61,7 @@ func main() {
 		compareSequences(conn1, conn2)
 		compareTables(conn1, conn2)
 		compareColumns(conn1, conn2)
-		comparePrimaryKeys(conn1, conn2)
-		compareUniqueConstraints(conn1, conn2)
+		compareIndexes(conn1, conn2)
 		compareForeignKeys(conn1, conn2)
 	} else if schemaType == "SEQUENCE" {
 		compareSequences(conn1, conn2)
@@ -70,10 +69,6 @@ func main() {
 		compareTables(conn1, conn2)
 	} else if schemaType == "COLUMN" {
 		compareColumns(conn1, conn2)
-	} else if schemaType == "PRIMARY_KEY" {
-		comparePrimaryKeys(conn1, conn2)
-	} else if schemaType == "UNIQUE" {
-		compareUniqueConstraints(conn1, conn2)
 	} else if schemaType == "INDEX" {
 		compareIndexes(conn1, conn2)
 	} else if schemaType == "FOREIGN_KEY" {
