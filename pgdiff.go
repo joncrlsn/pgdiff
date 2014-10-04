@@ -1,7 +1,6 @@
 package main
 
 import "fmt"
-
 import "log"
 import "flag"
 import "os"
@@ -61,8 +60,9 @@ func main() {
 		compareSequences(conn1, conn2)
 		compareTables(conn1, conn2)
 		compareColumns(conn1, conn2)
-		compareIndexes(conn1, conn2)
+		compareIndexes(conn1, conn2) // includes PK and Unique indexes
 		compareForeignKeys(conn1, conn2)
+		compareRoles(conn1, conn2)
 	} else if schemaType == "SEQUENCE" {
 		compareSequences(conn1, conn2)
 	} else if schemaType == "TABLE" {
@@ -73,6 +73,8 @@ func main() {
 		compareIndexes(conn1, conn2)
 	} else if schemaType == "FOREIGN_KEY" {
 		compareForeignKeys(conn1, conn2)
+	} else if schemaType == "ROLE" {
+		compareRoles(conn1, conn2)
 	} else {
 		fmt.Println("Not yet handled:", schemaType)
 	}
