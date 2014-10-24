@@ -6,83 +6,114 @@ import "strings"
 import "database/sql"
 import "github.com/joncrlsn/pgutil"
 
-// ColumnSchema holds a channel streaming column data from one of the databases as well as
-// a reference to the current row of data we're viewing.
-//
-// ColumnSchema implements the Schema interface defined in pgdiff.go
-type ColumnSchema struct {
-	channel chan map[string]string
-	row     map[string]string
-	done    bool
+// ==================================
+// ColumnRows definition
+// ==================================
+type ColumnRows []map[string]string
+
+func (slice ColumnRows) Len() int {
+    return len(slice)
 }
 
-// NextRow reads from the channel and tells you if there are (probably) more or not
+func (slice ColumnRows) Less(i, j int) bool {
+	if slice[i]["table_name"] < slice[j]["table_name"] {
+		return true
+	}
+	return slice[i]["column_name"] < slice[j]["column_name"]
+}
+
+func (slice ColumnRows) Swap(i, j int) {
+    slice[i], slice[j] = slice[j], slice[i]
+}
+
+// ==================================
+// ColumnSchema definition 
+// (implements Schema -- defined in pgdiff.go)
+// ==================================
+
+// ColumnSchema holds a slice of rows from one of the databases as well as
+// a reference to the current row of data we're viewing.
+type ColumnSchema struct {
+	rows   ColumnRows
+	rowNum int
+	done   bool
+}
+
+// get returns the value from the current row for the given key
+func (c *ColumnSchema) get(key string) string {
+	if c.rowNum >= len(c.rows) {
+		return ""
+	}
+	return c.rows[c.rowNum][key]
+}
+
+// NextRow increments the rowNum and tells you whether or not there are more
 func (c *ColumnSchema) NextRow() bool {
-	c.row = <-c.channel
-	if len(c.row) == 0 {
+	if c.rowNum >= len(c.rows)-1 {
 		c.done = true
 	}
+	c.rowNum = c.rowNum + 1
 	return !c.done
 }
 
 // Compare tells you, in one pass, whether or not the first row matches, is less than, or greater than the second row
-func (c ColumnSchema) Compare(obj interface{}) int {
+func (c *ColumnSchema) Compare(obj interface{}) int {
 	c2, ok := obj.(*ColumnSchema)
 	if !ok {
 		fmt.Println("Error!!!, change needs a ColumnSchema instance", c2)
 	}
 
-	val := _compareString(c.row["table_name"], c2.row["table_name"])
+	val := _compareString(c.get("table_name"), c2.get("table_name"))
 	if val != 0 {
 		// Table name differed so return that value
 		return val
 	}
 
 	// Table name was the same so compare column name
-	val = _compareString(c.row["column_name"], c2.row["column_name"])
+	val = _compareString(c.get("column_name"), c2.get("column_name"))
 	return val
 }
 
-// Add returns SQL to add the column
-func (c ColumnSchema) Add() {
-	if c.row["data_type"] == "character varying" {
-		maxLength, valid := getMaxLength(c.row["character_maximum_length"])
+// Add prints SQL to add the column
+func (c *ColumnSchema) Add() {
+	if c.get("data_type") == "character varying" {
+		maxLength, valid := getMaxLength(c.get("character_maximum_length"))
 		if !valid {
 			fmt.Println("-- WARNING: varchar column has no maximum length.  Set to 1024")
 		}
-		fmt.Printf("ALTER TABLE %s ADD COLUMN %s %s(%s)", c.row["table_name"], c.row["column_name"], c.row["data_type"], maxLength)
+		fmt.Printf("ALTER TABLE %s ADD COLUMN %s %s(%s)", c.get("table_name"), c.get("column_name"), c.get("data_type"), maxLength)
 	} else {
-		fmt.Printf("ALTER TABLE %s ADD COLUMN %s %s", c.row["table_name"], c.row["column_name"], c.row["data_type"])
+		fmt.Printf("ALTER TABLE %s ADD COLUMN %s %s", c.get("table_name"), c.get("column_name"), c.get("data_type"))
 	}
 
-	if c.row["is_nullable"] == "NO" {
+	if c.get("is_nullable") == "NO" {
 		fmt.Printf(" NOT NULL")
 	}
-	if c.row["column_default"] != "null" {
-		fmt.Printf(" DEFAULT %s", c.row["column_default"])
+	if c.get("column_default") != "null" {
+		fmt.Printf(" DEFAULT %s", c.get("column_default"))
 	}
 	fmt.Printf(";\n")
 }
 
-// Drop returns SQL to drop the column
-func (c ColumnSchema) Drop() {
+// Drop prints SQL to drop the column
+func (c *ColumnSchema) Drop() {
 	// if dropping column
-	fmt.Printf("ALTER TABLE %s DROP COLUMN IF EXISTS %s;\n", c.row["table_name"], c.row["column_name"])
+	fmt.Printf("ALTER TABLE %s DROP COLUMN IF EXISTS %s;\n", c.get("table_name"), c.get("column_name"))
 }
 
 // Change handles the case where the table and column match, but the details do not
-func (c ColumnSchema) Change(obj interface{}) {
+func (c *ColumnSchema) Change(obj interface{}) {
 	c2, ok := obj.(*ColumnSchema)
 	if !ok {
 		fmt.Println("Error!!!, ColumnSchema.Change(obj) needs a ColumnSchema instance", c2)
 	}
 
 	// Detect column type change (mostly varchar length, or number size increase)  (integer to/from bigint is OK)
-	if c.row["data_type"] == c2.row["data_type"] {
-		if c.row["data_type"] == "character varying" {
-			max1, max1Valid := getMaxLength(c.row["character_maximum_length"])
-			max2, max2Valid := getMaxLength(c2.row["character_maximum_length"])
-			if (max1Valid || !max2Valid) && (max1 != c2.row["character_maximum_length"]) {
+	if c.get("data_type") == c2.get("data_type") {
+		if c.get("data_type") == "character varying" {
+			max1, max1Valid := getMaxLength(c.get("character_maximum_length"))
+			max2, max2Valid := getMaxLength(c2.get("character_maximum_length"))
+			if (max1Valid || !max2Valid) && (max1 != c2.get("character_maximum_length")) {
 				if !max1Valid {
 					fmt.Println("-- WARNING: varchar column has no maximum length.  Setting to 1024")
 				}
@@ -93,43 +124,47 @@ func (c ColumnSchema) Change(obj interface{}) {
 				if max1Int < max2Int {
 					fmt.Println("-- WARNING: The next statement will shorten a character varying column.")
 				}
-				fmt.Printf("ALTER TABLE %s ALTER COLUMN %s TYPE character varying(%s);\n", c.row["table_name"], c.row["column_name"], max1)
+				fmt.Printf("ALTER TABLE %s ALTER COLUMN %s TYPE character varying(%s);\n", c.get("table_name"), c.get("column_name"), max1)
 			}
 		}
 	}
 
 	// TODO: Code and test a column change from integer to bigint
-	if c.row["data_type"] != c2.row["data_type"] {
-		fmt.Printf("-- WARNING: This type change may not work well: (%s to %s).\n", c2.row["data_type"], c.row["data_type"])
-		if strings.HasPrefix(c.row["data_type"], "character") {
-			max1, max1Valid := getMaxLength(c.row["character_maximum_length"])
+	if c.get("data_type") != c2.get("data_type") {
+		fmt.Printf("-- WARNING: This type change may not work well: (%s to %s).\n", c2.get("data_type"), c.get("data_type"))
+		if strings.HasPrefix(c.get("data_type"), "character") {
+			max1, max1Valid := getMaxLength(c.get("character_maximum_length"))
 			if !max1Valid {
 				fmt.Println("-- WARNING: varchar column has no maximum length.  Setting to 1024")
 			}
-			fmt.Printf("ALTER TABLE %s ALTER COLUMN %s TYPE %s(%s);\n", c.row["table_name"], c.row["column_name"], c.row["data_type"], max1)
+			fmt.Printf("ALTER TABLE %s ALTER COLUMN %s TYPE %s(%s);\n", c.get("table_name"), c.get("column_name"), c.get("data_type"), max1)
 		} else {
-			fmt.Printf("ALTER TABLE %s ALTER COLUMN %s TYPE %s;\n", c.row["table_name"], c.row["column_name"], c.row["data_type"])
+			fmt.Printf("ALTER TABLE %s ALTER COLUMN %s TYPE %s;\n", c.get("table_name"), c.get("column_name"), c.get("data_type"))
 		}
 	}
 
 	// Detect column default change (or added, dropped)
-	if c.row["column_default"] == "null" {
-		if c.row["column_default"] != "null" {
-			fmt.Printf("ALTER TABLE %s ALTER COLUMN %s DROP DEFAULT;\n", c.row["table_name"], c.row["column_name"])
+	if c.get("column_default") == "null" {
+		if c.get("column_default") != "null" {
+			fmt.Printf("ALTER TABLE %s ALTER COLUMN %s DROP DEFAULT;\n", c.get("table_name"), c.get("column_name"))
 		}
-	} else if c.row["column_default"] != c2.row["column_default"] {
-		fmt.Printf("ALTER TABLE %s ALTER COLUMN %s SET DEFAULT %s;\n", c.row["table_name"], c.row["column_name"], c.row["column_default"])
+	} else if c.get("column_default") != c2.get("column_default") {
+		fmt.Printf("ALTER TABLE %s ALTER COLUMN %s SET DEFAULT %s;\n", c.get("table_name"), c.get("column_name"), c.get("column_default"))
 	}
 
 	// TODO Detect not-null and nullable change
-	if c.row["is_nullable"] != c2.row["is_nullable"] {
-		if c.row["is_nullable"] == "YES" {
-			fmt.Printf("ALTER TABLE %s ALTER COLUMN %s DROP NOT NULL;\n", c.row["table_name"], c.row["column_name"])
+	if c.get("is_nullable") != c2.get("is_nullable") {
+		if c.get("is_nullable") == "YES" {
+			fmt.Printf("ALTER TABLE %s ALTER COLUMN %s DROP NOT NULL;\n", c.get("table_name"), c.get("column_name"))
 		} else {
-			fmt.Printf("ALTER TABLE %s ALTER COLUMN %s SET NOT NULL;\n", c.row["table_name"], c.row["column_name"])
+			fmt.Printf("ALTER TABLE %s ALTER COLUMN %s SET NOT NULL;\n", c.get("table_name"), c.get("column_name"))
 		}
 	}
 }
+
+// ==================================
+// Functions
+// ==================================
 
 /*
  * Compare the columns in the two databases
@@ -150,15 +185,27 @@ ORDER by table_name, column_name COLLATE "C" ASC;`
 	rowChan1, _ := pgutil.QueryStrings(conn1, sql)
 	rowChan2, _ := pgutil.QueryStrings(conn2, sql)
 
-	// We have to explicitly type this as Schema for some reason
-	var schema1 Schema = &ColumnSchema{channel: rowChan1}
-	var schema2 Schema = &ColumnSchema{channel: rowChan2}
+	//rows1 := make([]map[string]string, 500)
+	rows1 := make(ColumnRows, 500)
+	for row := range rowChan1 {
+		rows1 = append(rows1, row)
+	}
+
+	//rows2 := make([]map[string]string, 500)
+	rows2 := make(ColumnRows, 500)
+	for row := range rowChan2 {
+		rows2 = append(rows2, row)
+	}
+
+	// We have to explicitly type this as Schema here for some unknown reason
+	var schema1 Schema = &ColumnSchema{rows: rows1, rowNum: -1}
+	var schema2 Schema = &ColumnSchema{rows: rows2, rowNum: -1}
 
 	// Compare the columns
 	doDiff(schema1, schema2)
 }
 
-// getMaxLength returns the maximum length and whether or not it is valie
+// getMaxLength returns the maximum length and whether or not it is valid
 func getMaxLength(maxLength string) (string, bool) {
 
 	if maxLength == "null" {
