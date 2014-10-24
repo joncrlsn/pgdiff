@@ -62,7 +62,7 @@ func main() {
 		compareColumns(conn1, conn2)
 		compareIndexes(conn1, conn2) // includes PK and Unique indexes
 		compareForeignKeys(conn1, conn2)
-		compareRoles(conn1, conn2)
+		//compareRoles(conn1, conn2)
 	} else if schemaType == "SEQUENCE" {
 		compareSequences(conn1, conn2)
 	} else if schemaType == "TABLE" {
@@ -74,7 +74,7 @@ func main() {
 	} else if schemaType == "FOREIGN_KEY" {
 		compareForeignKeys(conn1, conn2)
 	} else if schemaType == "ROLE" {
-		compareRoles(conn1, conn2)
+		//compareRoles(conn1, conn2)
 	} else {
 		fmt.Println("Not yet handled:", schemaType)
 	}
