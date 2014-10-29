@@ -71,6 +71,7 @@ func (c *IndexSchema) Compare(obj interface{}) int {
 	c2, ok := obj.(*IndexSchema)
 	if !ok {
 		fmt.Println("Error!!!, change needs a IndexSchema instance", c2)
+        return +999
 	}
 
 	if len(c.get("table_name")) == 0 || len(c.get("index_name")) == 0 {
