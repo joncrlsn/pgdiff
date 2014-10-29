@@ -1,5 +1,6 @@
 package main
 
+import "sort"
 import "fmt"
 import "strconv"
 import "strings"
@@ -12,22 +13,24 @@ import "github.com/joncrlsn/pgutil"
 type ColumnRows []map[string]string
 
 func (slice ColumnRows) Len() int {
-    return len(slice)
+	return len(slice)
 }
 
 func (slice ColumnRows) Less(i, j int) bool {
-	if slice[i]["table_name"] < slice[j]["table_name"] {
-		return true
+	//fmt.Printf("--Less %s:%s with %s:%s", slice[i]["table_name"], slice[i]["column_name"], slice[j]["table_name"], slice[j]["column_name"])
+	if slice[i]["table_name"] == slice[j]["table_name"] {
+		return slice[i]["column_name"] < slice[j]["column_name"]
 	}
-	return slice[i]["column_name"] < slice[j]["column_name"]
+	return slice[i]["table_name"] < slice[j]["table_name"]
 }
 
 func (slice ColumnRows) Swap(i, j int) {
-    slice[i], slice[j] = slice[j], slice[i]
+	fmt.Printf("--Swapping %d/%s:%s with %d/%s:%s \n", i, slice[i]["table_name"], slice[i]["column_name"], j, slice[j]["table_name"], slice[j]["column_name"])
+	slice[i], slice[j] = slice[j], slice[i]
 }
 
 // ==================================
-// ColumnSchema definition 
+// ColumnSchema definition
 // (implements Schema -- defined in pgdiff.go)
 // ==================================
 
@@ -180,22 +183,25 @@ SELECT table_name
 FROM information_schema.columns 
 WHERE table_schema = 'public'
 AND is_updatable = 'YES'
-ORDER by table_name, column_name COLLATE "C" ASC;`
+-- We do not depend on this sorting correctly
+ORDER BY table_name, column_name COLLATE "C" ASC;`
 
 	rowChan1, _ := pgutil.QueryStrings(conn1, sql)
 	rowChan2, _ := pgutil.QueryStrings(conn2, sql)
 
 	//rows1 := make([]map[string]string, 500)
-	rows1 := make(ColumnRows, 500)
+	rows1 := make(ColumnRows, 0)
 	for row := range rowChan1 {
 		rows1 = append(rows1, row)
 	}
+	sort.Sort(rows1)
 
 	//rows2 := make([]map[string]string, 500)
-	rows2 := make(ColumnRows, 500)
+	rows2 := make(ColumnRows, 0)
 	for row := range rowChan2 {
 		rows2 = append(rows2, row)
 	}
+	sort.Sort(&rows2)
 
 	// We have to explicitly type this as Schema here for some unknown reason
 	var schema1 Schema = &ColumnSchema{rows: rows1, rowNum: -1}
