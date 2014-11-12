@@ -24,9 +24,16 @@ var dbInfo2 pgutil.DbInfo
 var schemaType string
 
 /*
- * Parse the program arguments
+ * Initialize anything needed later
  */
 func init() {
+}
+
+/*
+ * Do the main logic
+ */
+func main() {
+
 	dbInfo1, dbInfo2 = parseFlags()
 	fmt.Println("-- db1:", dbInfo1)
 	fmt.Println("-- db2:", dbInfo2)
@@ -35,17 +42,10 @@ func init() {
 	// Remaining args:
 	args = flag.Args()
 	if len(args) == 0 {
-		fmt.Println("The required first argument is SchemaType: SEQUENCE, TABLE, COLUMN, CONSTRAINT, ROLE")
+		fmt.Println("The required first argument is SchemaType: SEQUENCE, TABLE, COLUMN, INDEX, FOREIGN_KEY, ROLE, GRANT")
 		os.Exit(1)
 	}
-
 	schemaType = strings.ToUpper(args[0])
-}
-
-/*
- * Do the main logic
- */
-func main() {
 
 	conn1, err := dbInfo1.Open()
 	check("opening database", err)
@@ -60,9 +60,10 @@ func main() {
 		compareSequences(conn1, conn2)
 		compareTables(conn1, conn2)
 		compareColumns(conn1, conn2)
-		compareIndexes(conn1, conn2) // includes PK and Unique indexes
+		compareIndexes(conn1, conn2) // includes PK and Unique constraints
 		compareForeignKeys(conn1, conn2)
-		//compareRoles(conn1, conn2)
+		compareRoles(conn1, conn2)
+		compareGrants(conn1, conn2)
 	} else if schemaType == "SEQUENCE" {
 		compareSequences(conn1, conn2)
 	} else if schemaType == "TABLE" {
@@ -74,14 +75,16 @@ func main() {
 	} else if schemaType == "FOREIGN_KEY" {
 		compareForeignKeys(conn1, conn2)
 	} else if schemaType == "ROLE" {
-		//compareRoles(conn1, conn2)
+		compareRoles(conn1, conn2)
+	} else if schemaType == "GRANT" {
+		compareGrants(conn1, conn2)
 	} else {
 		fmt.Println("Not yet handled:", schemaType)
 	}
 }
 
 /*
- * This is a generic diff function that can compare tables, columns, constraints, roles.
+ * This is a generic diff function that compares tables, columns, indexes, roles, grants, etc.
  * Different behaviors are specified the Schema implementations
  */
 func doDiff(db1 Schema, db2 Schema) {

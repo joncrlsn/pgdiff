@@ -11,20 +11,20 @@ import "github.com/joncrlsn/pgutil"
 type ForeignKeyRows []map[string]string
 
 func (slice ForeignKeyRows) Len() int {
-    return len(slice)
+	return len(slice)
 }
 
 func (slice ForeignKeyRows) Less(i, j int) bool {
-    //fmt.Printf("--Less %s:%s with %s:%s", slice[i]["table_name"], slice[i]["column_name"], slice[j]["table_name"], slice[j]["column_name"])
-    if slice[i]["table_name"] == slice[j]["table_name"] {
-        return slice[i]["constraint_def"] < slice[j]["constraint_def"]
-    }
-    return slice[i]["table_name"] < slice[j]["table_name"]
+	//fmt.Printf("--Less %s:%s with %s:%s", slice[i]["table_name"], slice[i]["column_name"], slice[j]["table_name"], slice[j]["column_name"])
+	if slice[i]["table_name"] == slice[j]["table_name"] {
+		return slice[i]["constraint_def"] < slice[j]["constraint_def"]
+	}
+	return slice[i]["table_name"] < slice[j]["table_name"]
 }
 
 func (slice ForeignKeyRows) Swap(i, j int) {
-    //fmt.Printf("--Swapping %d/%s:%s with %d/%s:%s \n", i, slice[i]["table_name"], slice[i]["index_name"], j, slice[j]["table_name"], slice[j]["index_name"])
-    slice[i], slice[j] = slice[j], slice[i]
+	//fmt.Printf("--Swapping %d/%s:%s with %d/%s:%s \n", i, slice[i]["table_name"], slice[i]["index_name"], j, slice[j]["table_name"], slice[j]["index_name"])
+	slice[i], slice[j] = slice[j], slice[i]
 }
 
 // ==================================
@@ -35,34 +35,34 @@ func (slice ForeignKeyRows) Swap(i, j int) {
 // ForeignKeySchema holds a slice of rows from one of the databases as well as
 // a reference to the current row of data we're viewing.
 type ForeignKeySchema struct {
-	rows    ForeignKeyRows
-	rowNum  int
-	done    bool
+	rows   ForeignKeyRows
+	rowNum int
+	done   bool
 }
 
 // get returns the value from the current row for the given key
 func (c *ForeignKeySchema) get(key string) string {
-    if c.rowNum >= len(c.rows) {
-        return ""
-    }
-    return c.rows[c.rowNum][key]
+	if c.rowNum >= len(c.rows) {
+		return ""
+	}
+	return c.rows[c.rowNum][key]
 }
 
 // get returns the current row for the given key
 func (c *ForeignKeySchema) getRow() map[string]string {
-    if c.rowNum >= len(c.rows) {
-        return make(map[string]string)
-    }
-    return c.rows[c.rowNum]
+	if c.rowNum >= len(c.rows) {
+		return make(map[string]string)
+	}
+	return c.rows[c.rowNum]
 }
 
 // NextRow reads from the channel and tells you if there are (probably) more or not
 func (c *ForeignKeySchema) NextRow() bool {
-    if c.rowNum >= len(c.rows)-1 {
-        c.done = true
-    }
-    c.rowNum = c.rowNum + 1
-    return !c.done
+	if c.rowNum >= len(c.rows)-1 {
+		c.done = true
+	}
+	c.rowNum = c.rowNum + 1
+	return !c.done
 }
 
 // Compare tells you, in one pass, whether or not the first row matches, is less than, or greater than the second row
@@ -117,21 +117,21 @@ WHERE c.contype = 'f';
 	rowChan1, _ := pgutil.QueryStrings(conn1, sql)
 	rowChan2, _ := pgutil.QueryStrings(conn2, sql)
 
-    rows1 := make(ForeignKeyRows, 0)
-    for row := range rowChan1 {
-        rows1 = append(rows1, row)
-    }
-    sort.Sort(rows1)
+	rows1 := make(ForeignKeyRows, 0)
+	for row := range rowChan1 {
+		rows1 = append(rows1, row)
+	}
+	sort.Sort(rows1)
 
-    rows2 := make(ForeignKeyRows, 0)
-    for row := range rowChan2 {
-        rows2 = append(rows2, row)
-    }
-    sort.Sort(rows2)
+	rows2 := make(ForeignKeyRows, 0)
+	for row := range rowChan2 {
+		rows2 = append(rows2, row)
+	}
+	sort.Sort(rows2)
 
-    // We have to explicitly type this as Schema here for some unknown reason
-    var schema1 Schema = &ForeignKeySchema{rows: rows1, rowNum: -1}
-    var schema2 Schema = &ForeignKeySchema{rows: rows2, rowNum: -1}
+	// We have to explicitly type this as Schema here for some unknown reason
+	var schema1 Schema = &ForeignKeySchema{rows: rows1, rowNum: -1}
+	var schema2 Schema = &ForeignKeySchema{rows: rows2, rowNum: -1}
 
 	// Compare the columns
 	doDiff(schema1, schema2)

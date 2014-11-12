@@ -63,7 +63,8 @@ SELECT table_name
     , is_insertable_into
 FROM information_schema.tables 
 WHERE table_schema = 'public' 
-AND table_type = 'BASE TABLE'
+AND (table_type = 'BASE TABLE' --OR table_type = 'VIEW'
+)
 ORDER BY table_name COLLATE "C" ASC;`
 
 	rowChan1, _ := pgutil.QueryStrings(conn1, sql)
