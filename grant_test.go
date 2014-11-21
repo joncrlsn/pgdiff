@@ -1,4 +1,3 @@
-// grant_test.go
 package main
 
 import (
@@ -26,6 +25,7 @@ func Test_parseGrants(t *testing.T) {
   , pg_catalog.array_to_string(a.attacl, E'\n') AS column_acl
 */
 
+// Note that these must be sorted for this to work
 var test1a = []map[string]string{
 	{"schema": "public", "relationship_name": "table1", "type": "TABLE", "relationship_acl": "c42=rwa/postgres", "column_name": "", "column_acl": ""},
 	{"schema": "public", "relationship_name": "table1", "type": "TABLE", "relationship_acl": "", "column_name": "column1", "column_acl": "c42ro=rwa/postgres"},
@@ -33,6 +33,7 @@ var test1a = []map[string]string{
 	{"schema": "public", "relationship_name": "table2", "type": "TABLE", "relationship_acl": "c42=rwa/postgres", "column_name": "", "column_acl": ""},
 }
 
+// Note that these must be sorted for this to work
 var test1b = []map[string]string{
 	{"schema": "public", "relationship_name": "table1", "type": "TABLE", "relationship_acl": "", "column_name": "column2", "column_acl": "c42ro=r/postgres\nc42=rwad/postgres"},
 	{"schema": "public", "relationship_name": "table2", "type": "TABLE", "relationship_acl": "c42=rwad/postgres", "column_name": "t1c1", "column_acl": ""},
