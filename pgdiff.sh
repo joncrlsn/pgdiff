@@ -2,15 +2,13 @@
 # pgdiff -U1 c42 -pw1 c422006 -d1 prd-cpc -o1 sslmode=disable -U2 c42 -pw2 c422006 -d2 cp_staging -o2 sslmode=disable COLUMN
 
 USER1=c42
-PASS1=c422006
-HOST1=localhost
-NAME1=prd-cpc
-OPT1="sslmode=disable"
+HOST1=dbwan
+NAME1=crashplan
+OPT1=
 
 USER2=c42
-PASS2=c422006
-HOST2=localhost
-NAME2=stg-cpc
+HOST2=fkd-msp
+NAME2=cp_staging
 OPT2="sslmode=disable"
 
 function rundiff() {
@@ -29,6 +27,7 @@ rundiff SEQUENCE
 rundiff TABLE
 rundiff COLUMN
 rundiff INDEX
+rundiff 
 #rundiff FOREIGN_KEY
 #rundiff ROLE
 
