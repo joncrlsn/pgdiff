@@ -42,7 +42,7 @@ func main() {
 	// Remaining args:
 	args = flag.Args()
 	if len(args) == 0 {
-		fmt.Println("The required first argument is SchemaType: SEQUENCE, TABLE, COLUMN, INDEX, FOREIGN_KEY, ROLE, GRANT")
+		fmt.Println("The required first argument is SchemaType: ROLE, SEQUENCE, TABLE, COLUMN, INDEX, FOREIGN_KEY, GRANT")
 		os.Exit(1)
 	}
 	schemaType = strings.ToUpper(args[0])
@@ -57,13 +57,16 @@ func main() {
 	// of alter statements to generate.  Rather, all should be generated in the
 	// proper order.
 	if schemaType == "ALL" {
+		compareRoles(conn1, conn2)
 		compareSequences(conn1, conn2)
 		compareTables(conn1, conn2)
 		compareColumns(conn1, conn2)
 		compareIndexes(conn1, conn2) // includes PK and Unique constraints
 		compareForeignKeys(conn1, conn2)
-		compareRoles(conn1, conn2)
+		compareOwners(conn1, conn2)
 		compareGrants(conn1, conn2)
+	} else if schemaType == "ROLE" {
+		compareRoles(conn1, conn2)
 	} else if schemaType == "SEQUENCE" {
 		compareSequences(conn1, conn2)
 	} else if schemaType == "TABLE" {
@@ -74,8 +77,8 @@ func main() {
 		compareIndexes(conn1, conn2)
 	} else if schemaType == "FOREIGN_KEY" {
 		compareForeignKeys(conn1, conn2)
-	} else if schemaType == "ROLE" {
-		compareRoles(conn1, conn2)
+	} else if schemaType == "OWNER" {
+		compareOwners(conn1, conn2)
 	} else if schemaType == "GRANT" {
 		compareGrants(conn1, conn2)
 	} else {
