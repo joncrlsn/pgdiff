@@ -6,9 +6,10 @@ import (
 )
 
 func Test_parseGrants(t *testing.T) {
-	doParseGrants(t, "c42ro=rwa/c42", "c42ro", 3)
-	doParseGrants(t, "=arwdDxt/c42", "", 7)
-	doParseGrants(t, "user2=arwxt/postgres", "user2", 5)
+	doParseGrants(t, "c42ro=rwa/c42", "c42ro", 3, 0)
+	doParseGrants(t, "=arwdDxt/c42\nc42=rwad/postgres", "", 7, 0)    // first of two lines
+	doParseGrants(t, "=arwdDxt/c42\nc42=rwad/postgres", "c42", 4, 1) // second of two lines
+	doParseGrants(t, "user2=arwxt/postgres", "user2", 5, 0)
 }
 
 /*
@@ -46,13 +47,14 @@ func Test_diffGrants(t *testing.T) {
 	doDiff(schema1, schema2)
 }
 
-func doParseGrants(t *testing.T, acl string, expectedRole string, expectedPermCount int) {
+func doParseGrants(t *testing.T, acl string, expectedRole string, expectedPermCount int, index int) {
 	fmt.Println("Testing", acl)
-	role, perms := parseGrants(acl)
-	if role != expectedRole {
-		t.Error("Wrong role parsed: %s instead of %s", role, expectedRole)
+	roleAcls := parseGrants(acl)
+	roleAcl := roleAcls[index]
+	if roleAcl.role != expectedRole {
+		t.Error("Wrong role parsed: %s instead of %s", roleAcl.role, expectedRole)
 	}
-	if len(perms) != expectedPermCount {
-		t.Error("Incorrect number of permissions parsed: %d instead of %d", len(perms), expectedPermCount)
+	if len(roleAcl.grants) != expectedPermCount {
+		t.Error("Incorrect number of permissions parsed: %d instead of %d", len(roleAcl.grants), expectedPermCount)
 	}
 }
