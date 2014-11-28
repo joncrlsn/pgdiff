@@ -42,16 +42,16 @@ func main() {
 	// Remaining args:
 	args = flag.Args()
 	if len(args) == 0 {
-		fmt.Println("The required first argument is SchemaType: ROLE, SEQUENCE, TABLE, COLUMN, INDEX, FOREIGN_KEY, GRANT")
+		fmt.Println("The required first argument is SchemaType: ROLE, SEQUENCE, TABLE, COLUMN, INDEX, FOREIGN_KEY, OWNER, GRANT_RELATIONSHIPS, GRANT_ATTRIBUTES")
 		os.Exit(1)
 	}
 	schemaType = strings.ToUpper(args[0])
 
 	conn1, err := dbInfo1.Open()
-	check("opening database", err)
+	check("opening database 1", err)
 
 	conn2, err := dbInfo2.Open()
-	check("opening database", err)
+	check("opening database 2", err)
 
 	// This section needs to be improved so that you do not need to choose the type
 	// of alter statements to generate.  Rather, all should be generated in the
@@ -64,7 +64,8 @@ func main() {
 		compareIndexes(conn1, conn2) // includes PK and Unique constraints
 		compareForeignKeys(conn1, conn2)
 		compareOwners(conn1, conn2)
-		compareGrants(conn1, conn2)
+		compareGrantRelationships(conn1, conn2)
+		compareGrantAttributes(conn1, conn2)
 	} else if schemaType == "ROLE" {
 		compareRoles(conn1, conn2)
 	} else if schemaType == "SEQUENCE" {
@@ -79,8 +80,10 @@ func main() {
 		compareForeignKeys(conn1, conn2)
 	} else if schemaType == "OWNER" {
 		compareOwners(conn1, conn2)
-	} else if schemaType == "GRANT" {
-		compareGrants(conn1, conn2)
+	} else if schemaType == "GRANT_RELATIONSHIPS" {
+		compareGrantRelationships(conn1, conn2)
+	} else if schemaType == "GRANT_ATTRIBUTES" {
+		compareGrantAttributes(conn1, conn2)
 	} else {
 		fmt.Println("Not yet handled:", schemaType)
 	}

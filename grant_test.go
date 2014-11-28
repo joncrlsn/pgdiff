@@ -5,56 +5,71 @@ import (
 	"testing"
 )
 
-func Test_parseGrants(t *testing.T) {
-	doParseGrants(t, "c42ro=rwa/c42", "c42ro", 3, 0)
-	doParseGrants(t, "=arwdDxt/c42\nc42=rwad/postgres", "", 7, 0)    // first of two lines
-	doParseGrants(t, "=arwdDxt/c42\nc42=rwad/postgres", "c42", 4, 1) // second of two lines
-	doParseGrants(t, "user2=arwxt/postgres", "user2", 5, 0)
+func Test_parseAcls(t *testing.T) {
+	doParseAcls(t, "c42ro=rwa/c42", "c42ro", 3)
+	doParseAcls(t, "=arwdDxt/c42", "public", 7)   // first of two lines
+	doParseAcls(t, "c42=rwad/postgres", "c42", 4) // second of two lines
+	doParseAcls(t, "user2=arwxt/postgres", "user2", 5)
+	doParseAcls(t, "", "", 0)
 }
 
 /*
- n.nspname AS schema
-  , c.relname AS relationship_name
-  , CASE c.relkind
-    	WHEN 'r' THEN 'TABLE'
-		WHEN 'v' THEN 'VIEW'
-		WHEN 'S' THEN 'SEQUENCE'
-		WHEN 'f' THEN 'FOREIGN TABLE'
-	END as type
-  , pg_catalog.array_to_string(c.relacl, E'\n') AS relationship_acl
-  , a.attname AS column_name
-  , pg_catalog.array_to_string(a.attacl, E'\n') AS column_acl
+ schema |   type   |               relationship_name               |   relationship_acl   |         column_name          | column_acl
+--------+----------+-----------------------------------------------+----------------------+------------------------------+-------------
+ public | TABLE    | t_brand                                       | c42ro=r/c42          |                              |
+ public | TABLE    | t_brand                                       | office42=arwdDxt/c42 |                              |
+ public | TABLE    | t_brand                                       | c42=arwdDxt/c42      |                              |
+ public | TABLE    | t_computer                                    | c42=arwdDxt/c42      | active                       | c42ro=r/c42
+ public | TABLE    | t_computer                                    | office42=arwdDxt/c42 | active                       | c42ro=r/c42
+ public | TABLE    | t_computer                                    | c42=arwdDxt/c42      | address                      | c42ro=r/c42
+ public | TABLE    | t_computer                                    | office42=arwdDxt/c42 | address                      | c42ro=r/c42
 */
 
 // Note that these must be sorted for this to work
-var test1a = []map[string]string{
-	{"schema": "public", "relationship_name": "table1", "type": "TABLE", "relationship_acl": "c42=rwa/postgres", "column_name": "", "column_acl": ""},
-	{"schema": "public", "relationship_name": "table1", "type": "TABLE", "relationship_acl": "", "column_name": "column1", "column_acl": "c42ro=rwa/postgres"},
-	{"schema": "public", "relationship_name": "table1", "type": "TABLE", "relationship_acl": "", "column_name": "column2", "column_acl": "c42ro=r/postgres\nc42=rwad/postgres"},
-	{"schema": "public", "relationship_name": "table2", "type": "TABLE", "relationship_acl": "c42=rwa/postgres", "column_name": "", "column_acl": ""},
+var relationship1 = []map[string]string{
+	{"schema": "public", "type": "TABLE", "relationship_name": "table1", "relationship_acl": "c42=rwa/postgres" },
+	{"schema": "public", "type": "TABLE", "relationship_name": "table1", "relationship_acl": "o42=xdwra/postgres" },
+	{"schema": "public", "type": "TABLE", "relationship_name": "table2", "relationship_acl": "c42=rwa/postgres" },
 }
 
 // Note that these must be sorted for this to work
-var test1b = []map[string]string{
-	{"schema": "public", "relationship_name": "table1", "type": "TABLE", "relationship_acl": "", "column_name": "column2", "column_acl": "c42ro=r/postgres\nc42=rwad/postgres"},
-	{"schema": "public", "relationship_name": "table2", "type": "TABLE", "relationship_acl": "c42=rwad/postgres", "column_name": "t1c1", "column_acl": ""},
+var relationship2 = []map[string]string{
+	{"schema": "public", "relationship_name": "table1", "type": "TABLE", "relationship_acl": "c42=r/postgres" },
+	{"schema": "public", "relationship_name": "table2", "type": "TABLE", "relationship_acl": "c42=rwad/postgres"},
+}
+
+// Note that these must be sorted for this to work
+var attribute1 = []map[string]string{
+	{"schema": "public", "type": "TABLE", "relationship_name": "table1", "attribute_name": "column1", "attribute_acl": "c42ro=r/postgres" },
+	{"schema": "public", "type": "TABLE", "relationship_name": "table1", "attribute_name": "column1", "attribute_acl": "o42ro=rwa/postgres" },
+	{"schema": "public", "type": "TABLE", "relationship_name": "table2", "attribute_name": "column2", "attribute_acl": "c42ro=r/postgres" },
+}
+
+// Note that these must be sorted for this to work
+var attribute2 = []map[string]string{
+	{"schema": "public", "type": "TABLE", "relationship_name": "table1", "attribute_name": "column1", "attribute_acl": "c42ro=r/postgres" },
+	{"schema": "public", "type": "TABLE", "relationship_name": "table1", "attribute_name": "column1", "attribute_acl": "o42ro=r/postgres" },
 }
 
 func Test_diffGrants(t *testing.T) {
-	fmt.Println("-- ==========\n-- Grants\n-- ==========")
-	var schema1 Schema = &GrantSchema{rows: test1a, rowNum: -1}
-	var schema2 Schema = &GrantSchema{rows: test1b, rowNum: -1}
-	doDiff(schema1, schema2)
+	fmt.Println("-- ==========\n-- Grants - Relationships \n-- ==========")
+	var relSchema1 Schema = &GrantRelationshipSchema{rows: relationship1, rowNum: -1}
+	var relSchema2 Schema = &GrantRelationshipSchema{rows: relationship2, rowNum: -1}
+	doDiff(relSchema1, relSchema2)
+
+	fmt.Println("-- ==========\n-- Grants - Attributes \n-- ==========")
+	var attSchema1 Schema = &GrantAttributeSchema{rows: attribute1, rowNum: -1}
+	var attSchema2 Schema = &GrantAttributeSchema{rows: attribute2, rowNum: -1}
+	doDiff(attSchema1, attSchema2)
 }
 
-func doParseGrants(t *testing.T, acl string, expectedRole string, expectedPermCount int, index int) {
+func doParseAcls(t *testing.T, acl string, expectedRole string, expectedPermCount int) {
 	fmt.Println("Testing", acl)
-	roleAcls := parseGrants(acl)
-	roleAcl := roleAcls[index]
-	if roleAcl.role != expectedRole {
-		t.Error("Wrong role parsed: %s instead of %s", roleAcl.role, expectedRole)
+	role, perms := parseAcl(acl)
+	if role != expectedRole {
+		t.Error("Wrong role parsed: " + role + " instead of " + expectedRole)
 	}
-	if len(roleAcl.grants) != expectedPermCount {
-		t.Error("Incorrect number of permissions parsed: %d instead of %d", len(roleAcl.grants), expectedPermCount)
+	if len(perms) != expectedPermCount {
+		t.Error("Incorrect number of permissions parsed: %d instead of %d", len(perms), expectedPermCount)
 	}
 }
