@@ -89,24 +89,24 @@ func (c *GrantAttributeSchema) Compare(obj interface{}) int {
 		return +999
 	}
 
-	val := misc.CompareString(c.get("schema"), c2.get("schema"))
+	val := misc.CompareStrings(c.get("schema"), c2.get("schema"))
 	if val != 0 {
 		return val
 	}
 
-	val = misc.CompareString(c.get("relationship_name"), c2.get("relationship_name"))
+	val = misc.CompareStrings(c.get("relationship_name"), c2.get("relationship_name"))
 	if val != 0 {
 		return val
 	}
 
-	val = misc.CompareString(c.get("attribute_name"), c2.get("attribute_name"))
+	val = misc.CompareStrings(c.get("attribute_name"), c2.get("attribute_name"))
 	if val != 0 {
 		return val
 	}
 
 	role1, _ := parseAcl(c.get("attribute_acl"))
 	role2, _ := parseAcl(c2.get("attribute_acl"))
-	val = misc.CompareString(role1, role2)
+	val = misc.CompareStrings(role1, role2)
 	return val
 }
 
