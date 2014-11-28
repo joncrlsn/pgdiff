@@ -27,15 +27,18 @@ function rundiff() {
     if [[ $x =~ y ]]; then
        pgrun -U $USER2 -pw $PASS2 -h $HOST2 -d $NAME2 -o "$OPT2" -f "${TYPE}.sql"
     fi
+    echo
 }
 
-#rundiff ROLE
-#rundiff SEQUENCE
-#rundiff TABLE
-#rundiff COLUMN
-#rundiff INDEX
-#rundiff FOREIGN_KEY
-#rundiff OWNER
+rundiff ROLE
+rundiff SEQUENCE
+rundiff TABLE
+rundiff OWNER
+rundiff COLUMN
+rundiff INDEX
+rundiff FOREIGN_KEY
 rundiff GRANT_RELATIONSHIP
 rundiff GRANT_ATTRIBUTE
+
+echo "Done!"
 
