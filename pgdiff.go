@@ -42,7 +42,7 @@ func main() {
 	// Remaining args:
 	args = flag.Args()
 	if len(args) == 0 {
-		fmt.Println("The required first argument is SchemaType: ROLE, SEQUENCE, TABLE, COLUMN, INDEX, FOREIGN_KEY, OWNER, GRANT_RELATIONSHIPS, GRANT_ATTRIBUTES")
+		fmt.Println("The required first argument is SchemaType: ROLE, SEQUENCE, TABLE, COLUMN, INDEX, FOREIGN_KEY, OWNER, GRANT_RELATIONSHIP, GRANT_ATTRIBUTE")
 		os.Exit(1)
 	}
 	schemaType = strings.ToUpper(args[0])
@@ -80,9 +80,9 @@ func main() {
 		compareForeignKeys(conn1, conn2)
 	} else if schemaType == "OWNER" {
 		compareOwners(conn1, conn2)
-	} else if schemaType == "GRANT_RELATIONSHIPS" {
+	} else if schemaType == "GRANT_RELATIONSHIP" {
 		compareGrantRelationships(conn1, conn2)
-	} else if schemaType == "GRANT_ATTRIBUTES" {
+	} else if schemaType == "GRANT_ATTRIBUTE" {
 		compareGrantAttributes(conn1, conn2)
 	} else {
 		fmt.Println("Not yet handled:", schemaType)

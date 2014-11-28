@@ -27,28 +27,28 @@ func Test_parseAcls(t *testing.T) {
 
 // Note that these must be sorted for this to work
 var relationship1 = []map[string]string{
-	{"schema": "public", "type": "TABLE", "relationship_name": "table1", "relationship_acl": "c42=rwa/postgres" },
-	{"schema": "public", "type": "TABLE", "relationship_name": "table1", "relationship_acl": "o42=xdwra/postgres" },
-	{"schema": "public", "type": "TABLE", "relationship_name": "table2", "relationship_acl": "c42=rwa/postgres" },
+	{"schema": "public", "type": "TABLE", "relationship_name": "table1", "relationship_acl": "c42=rwa/postgres"},
+	{"schema": "public", "type": "TABLE", "relationship_name": "table1", "relationship_acl": "o42=xdwra/postgres"},
+	{"schema": "public", "type": "TABLE", "relationship_name": "table2", "relationship_acl": "c42=rwa/postgres"},
 }
 
 // Note that these must be sorted for this to work
 var relationship2 = []map[string]string{
-	{"schema": "public", "relationship_name": "table1", "type": "TABLE", "relationship_acl": "c42=r/postgres" },
+	{"schema": "public", "relationship_name": "table1", "type": "TABLE", "relationship_acl": "c42=r/postgres"},
 	{"schema": "public", "relationship_name": "table2", "type": "TABLE", "relationship_acl": "c42=rwad/postgres"},
 }
 
 // Note that these must be sorted for this to work
 var attribute1 = []map[string]string{
-	{"schema": "public", "type": "TABLE", "relationship_name": "table1", "attribute_name": "column1", "attribute_acl": "c42ro=r/postgres" },
-	{"schema": "public", "type": "TABLE", "relationship_name": "table1", "attribute_name": "column1", "attribute_acl": "o42ro=rwa/postgres" },
-	{"schema": "public", "type": "TABLE", "relationship_name": "table2", "attribute_name": "column2", "attribute_acl": "c42ro=r/postgres" },
+	{"schema": "public", "type": "TABLE", "relationship_name": "table1", "attribute_name": "column1", "attribute_acl": "c42ro=r/postgres"},
+	{"schema": "public", "type": "TABLE", "relationship_name": "table1", "attribute_name": "column1", "attribute_acl": "o42ro=rwa/postgres"},
+	{"schema": "public", "type": "TABLE", "relationship_name": "table2", "attribute_name": "column2", "attribute_acl": "c42ro=r/postgres"},
 }
 
 // Note that these must be sorted for this to work
 var attribute2 = []map[string]string{
-	{"schema": "public", "type": "TABLE", "relationship_name": "table1", "attribute_name": "column1", "attribute_acl": "c42ro=r/postgres" },
-	{"schema": "public", "type": "TABLE", "relationship_name": "table1", "attribute_name": "column1", "attribute_acl": "o42ro=r/postgres" },
+	{"schema": "public", "type": "TABLE", "relationship_name": "table1", "attribute_name": "column1", "attribute_acl": "c42ro=r/postgres"},
+	{"schema": "public", "type": "TABLE", "relationship_name": "table1", "attribute_name": "column1", "attribute_acl": "o42ro=r/postgres"},
 }
 
 func Test_diffGrants(t *testing.T) {
