@@ -1,16 +1,21 @@
 # pgdiff - PostgreSQL schema diff
 
-Please note that this program never modifies any database directly, and you are solely responsible for verifying the generated SQL *before* running it against your database.  Now that you know about that, it should give you confidence that it is safe to try out and see what SQL gets generated.
+An important feature of this utility is that it never modifies any database directly. You are solely responsible for verifying the generated SQL *before* running it against your database.  Now that you know about that, it should give you confidence that it is safe to try out and see what SQL gets generated.
 
-Written in GoLang, this utility compares the schema between two PostgreSQL databases and generates alter statements to be *manually* run against the second database.  Not everything in the schema is compared, but the things considered important (at the moment) are: sequences, tables, columns (and their default values), primary keys, unique constraints, foreign keys... and soon indexes and user roles. 
+Written in GoLang, pgdiff compares the schema between two PostgreSQL databases and generates alter statements to be *manually* run against the second database.  At the moment, not everything in the schema is compared, but the things considered important are: roles, sequences, tables, columns (and their default values), primary keys, unique constraints, foreign keys, roles, ownership information, and grants. 
 
-It is written to be easy to add and improve the accuracy of the diff.  Please let me know if you think this goal has not been met.  I'm very interested in suggestions and contributions to improve this program.  I'm not a GoLang expert yet, but each program I write gets me closer to that goal.
+It is written to be easy to add and improve the accuracy of the diff.  If you find something that seems wrong and you want me to look at it, please send me two schema-only database dumps that I can test with (Use the --schema-only option with pg\_dump)
 
-I'm a big fan of GoLang because of how easy it is to deliver a single executable on almost any platform.  But, just as important I love the design choices and the concurrency features which I've only begun to delve into.  For example, streaming objects back (via a channel) from a go routine is far better than returning a potentially massive list of objects (as you are forced to do with most languages... or implement paging).
+### download
+[osx64](https://github.com/joncrlsn/pgrun/raw/master/bin-osx64/pgdiff "OSX 64-bit version")
+[osx32](https://github.com/joncrlsn/pgrun/raw/master/bin-osx32/pgdiff "OSX version")
+[linux64](https://github.com/joncrlsn/pgrun/raw/master/bin-linux64/pgdiff "Linux 64-bit version")
+[linux32](https://github.com/joncrlsn/pgrun/raw/master/bin-linux32/pgdiff "Linux version")
+[win64](https://github.com/joncrlsn/pgrun/raw/master/bin-win64/pgdiff.exe "Windows 64-bit version")
+[win32](https://github.com/joncrlsn/pgrun/raw/master/bin-win32/pgdiff.exe "Windows version")
 
-<!-- A couple of binaries to save you the effort: [Mac](https://github.com/joncrlsn/pgdiff/raw/master/bin-osx/pgdiff "OSX version") -->
 
-## usage
+### usage
 
 	pgdiff [database flags] <schemaType>
 
@@ -28,4 +33,4 @@ I'm a big fan of GoLang because of how easy it is to deliver a single executable
   -p2          | second db port number.  defaults to 5432
   -d2          | second db name
 
-&lt;schemaType&gt; the type of objects in the schema to compare: ALL, SEQUENCE, TABLE, COLUMN, PRIMARY_KEY, UNIQUE, FOREIGN_KEY (soon: INDEX, ROLE)
+&lt;schemaType&gt; the type of objects in the schema to compare: ALL, ROLE, SEQUENCE, TABLE, COLUMN, INDEX, FOREIGN_KEY, OWNER, GRANT_RELATIONSHIP, GRANT_ATTRIBUTE
