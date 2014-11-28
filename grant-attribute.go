@@ -112,16 +112,14 @@ func (c *GrantAttributeSchema) Compare(obj interface{}) int {
 
 // Add prints SQL to add the column
 func (c *GrantAttributeSchema) Add() {
-	fmt.Println("--Add")
 	role, grants := parseGrants(c.get("attribute_acl"))
-	fmt.Printf("GRANT %s (%s) ON %s TO %s;\n", strings.Join(grants, ", "), c.get("attribute_name"), c.get("relationship_name"), role)
+	fmt.Printf("GRANT %s (%s) ON %s TO %s; -- Add\n", strings.Join(grants, ", "), c.get("attribute_name"), c.get("relationship_name"), role)
 }
 
 // Drop prints SQL to drop the column
 func (c *GrantAttributeSchema) Drop() {
-	fmt.Println("--Drop")
 	role, grants := parseGrants(c.get("attribute_acl"))
-	fmt.Printf("REVOKE %s (%s) ON %s FROM %s;\n", strings.Join(grants, ", "), c.get("attribute_name"), c.get("relationship_name"), role)
+	fmt.Printf("REVOKE %s (%s) ON %s FROM %s; -- Drop\n", strings.Join(grants, ", "), c.get("attribute_name"), c.get("relationship_name"), role)
 }
 
 // Change handles the case where the relationship and column match, but the details do not
@@ -130,7 +128,6 @@ func (c *GrantAttributeSchema) Change(obj interface{}) {
 	if !ok {
 		fmt.Println("-- Error!!!, Change needs a GrantAttributeSchema instance", c2)
 	}
-	fmt.Println("--Change")
 
 	role, grants1 := parseGrants(c.get("attribute_acl"))
 	_, grants2 := parseGrants(c2.get("attribute_acl"))
@@ -144,7 +141,7 @@ func (c *GrantAttributeSchema) Change(obj interface{}) {
 		}
 	}
 	if len(grantList) > 0 {
-		fmt.Printf("GRANT %s (%s) ON %s TO %s;\n", strings.Join(grantList, ", "), c.get("attribute_name"), c.get("relationship_name"), role)
+		fmt.Printf("GRANT %s (%s) ON %s TO %s; -- Change\n", strings.Join(grantList, ", "), c.get("attribute_name"), c.get("relationship_name"), role)
 	}
 
 	// Find grants in the second db that are not in the first
@@ -156,7 +153,7 @@ func (c *GrantAttributeSchema) Change(obj interface{}) {
 		}
 	}
 	if len(revokeList) > 0 {
-		fmt.Printf("REVOKE %s (%s) ON %s FROM %s;\n", strings.Join(grantList, ", "), c.get("attribute_name"), c.get("relationship_name"), role)
+		fmt.Printf("REVOKE %s (%s) ON %s FROM %s; -- Change\n", strings.Join(grantList, ", "), c.get("attribute_name"), c.get("relationship_name"), role)
 	}
 
 	//	fmt.Printf("--1 rel:%s, relAcl:%s, col:%s, colAcl:%s\n", c.get("attribute_name"), c.get("attribute_acl"), c.get("attribute_name"), c.get("attribute_acl"))

@@ -105,16 +105,14 @@ func (c *GrantRelationshipSchema) Compare(obj interface{}) int {
 
 // Add prints SQL to add the column
 func (c *GrantRelationshipSchema) Add() {
-	fmt.Println("--Add")
 	role, grants := parseGrants(c.get("relationship_acl"))
-	fmt.Printf("GRANT %s ON %s TO %s;\n", strings.Join(grants, ", "), c.get("relationship_name"), role)
+	fmt.Printf("GRANT %s ON %s TO %s; -- Add\n", strings.Join(grants, ", "), c.get("relationship_name"), role)
 }
 
 // Drop prints SQL to drop the column
 func (c *GrantRelationshipSchema) Drop() {
-	fmt.Println("--Drop")
 	role, grants := parseGrants(c.get("relationship_acl"))
-	fmt.Printf("REVOKE %s ON %s FROM %s;\n", strings.Join(grants, ", "), c.get("relationship_name"), role)
+	fmt.Printf("REVOKE %s ON %s FROM %s; -- Drop\n", strings.Join(grants, ", "), c.get("relationship_name"), role)
 }
 
 // Change handles the case where the relationship and column match, but the details do not
@@ -123,7 +121,6 @@ func (c *GrantRelationshipSchema) Change(obj interface{}) {
 	if !ok {
 		fmt.Println("-- Error!!!, change needs a GrantRelationshipSchema instance", c2)
 	}
-	fmt.Println("--Change")
 
 	role, grants1 := parseGrants(c.get("relationship_acl"))
 	_, grants2 := parseGrants(c2.get("relationship_acl"))
@@ -137,7 +134,7 @@ func (c *GrantRelationshipSchema) Change(obj interface{}) {
 		}
 	}
 	if len(grantList) > 0 {
-		fmt.Printf("GRANT %s ON %s TO %s;\n", strings.Join(grantList, ", "), c.get("relationship_name"), role)
+		fmt.Printf("GRANT %s ON %s TO %s; -- Change\n", strings.Join(grantList, ", "), c.get("relationship_name"), role)
 	}
 
 	// Find grants in the second db that are not in the first
@@ -149,7 +146,7 @@ func (c *GrantRelationshipSchema) Change(obj interface{}) {
 		}
 	}
 	if len(revokeList) > 0 {
-		fmt.Printf("REVOKE %s ON %s FROM %s;\n", strings.Join(revokeList, ", "), c.get("relationship_name"), role)
+		fmt.Printf("REVOKE %s ON %s FROM %s; -- Change\n", strings.Join(revokeList, ", "), c.get("relationship_name"), role)
 	}
 
 	//	fmt.Printf("--1 rel:%s, relAcl:%s, col:%s, colAcl:%s\n", c.get("relationship_name"), c.get("relationship_acl"), c.get("column_name"), c.get("column_acl"))

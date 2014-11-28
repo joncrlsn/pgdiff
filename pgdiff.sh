@@ -35,6 +35,7 @@ function rundiff() {
 #rundiff COLUMN
 #rundiff INDEX
 #rundiff FOREIGN_KEY
-#rundiff GRANT
-rundiff OWNER
+#rundiff OWNER
+rundiff GRANT_RELATIONSHIP
+rundiff GRANT_ATTRIBUTE
 
