@@ -86,19 +86,19 @@ func (c *GrantRelationshipSchema) Compare(obj interface{}) int {
 		return +999
 	}
 
-	val := misc.CompareString(c.get("schema"), c2.get("schema"))
+	val := misc.CompareStrings(c.get("schema"), c2.get("schema"))
 	if val != 0 {
 		return val
 	}
 
-	val = misc.CompareString(c.get("relationship_name"), c2.get("relationship_name"))
+	val = misc.CompareStrings(c.get("relationship_name"), c2.get("relationship_name"))
 	if val != 0 {
 		return val
 	}
 
 	relRole1, _ := parseAcl(c.get("relationship_acl"))
 	relRole2, _ := parseAcl(c2.get("relationship_acl"))
-	val = misc.CompareString(relRole1, relRole2)
+	val = misc.CompareStrings(relRole1, relRole2)
 	return val
 
 }
