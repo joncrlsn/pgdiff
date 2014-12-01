@@ -4,9 +4,10 @@ import "fmt"
 import "database/sql"
 import "sort"
 import "github.com/joncrlsn/pgutil"
+import "github.com/joncrlsn/misc"
 
 // ==================================
-// RoleRows definition (an array of string maps)
+// RoleRows definition (a sortable slice of string maps)
 // ==================================
 type RoleRows []map[string]string
 
@@ -68,7 +69,7 @@ func (c *RoleSchema) Compare(obj interface{}) int {
 		return +999
 	}
 
-	val := _compareString(c.get("rolname"), c2.get("rolname"))
+	val := misc.CompareStrings(c.get("rolname"), c2.get("rolname"))
 	return val
 }
 
@@ -99,28 +100,22 @@ func (c RoleSchema) Add() {
 	// We don't care about efficiency here so we just concat strings
 	options := " WITH PASSWORD 'changeme'"
 
+	if c.get("rolcanlogin") == "true" {
+		options += " LOGIN"
+	} else {
+		options += " NOLOGIN"
+	}
+
 	if c.get("rolsuper") == "true" {
 		options += " SUPERUSER"
-	} else {
-		options += " NOSUPERUSER"
 	}
 
 	if c.get("rolcreatedb") == "true" {
 		options += " CREATEDB"
-	} else {
-		options += " NOCREATEDB"
 	}
 
 	if c.get("rolcreaterole") == "true" {
 		options += " CREATEROLE"
-	} else {
-		options += " NOCREATEROLE"
-	}
-
-	if c.get("rolcreateuser") == "true" {
-		options += " CREATEUSER"
-	} else {
-		options += " NOCREATEUSER"
 	}
 
 	if c.get("rolinherit") == "true" {
@@ -150,29 +145,6 @@ func (c RoleSchema) Drop() {
 	fmt.Printf("DROP ROLE %s;\n", c.get("rolname"))
 }
 
-/*
-ALTER ROLE name [ [ WITH ] option [ ... ] ]
-
-where option can be:
-
-      SUPERUSER | NOSUPERUSER
-    | CREATEDB | NOCREATEDB
-    | CREATEROLE | NOCREATEROLE
-    | CREATEUSER | NOCREATEUSER
-    | INHERIT | NOINHERIT
-    | LOGIN | NOLOGIN
-    | REPLICATION | NOREPLICATION
-    | CONNECTION LIMIT connlimit
-    | [ ENCRYPTED | UNENCRYPTED ] PASSWORD 'password'
-    | VALID UNTIL 'timestamp'
-
-ALTER ROLE name RENAME TO new_name
-
-ALTER ROLE name [ IN DATABASE database_name ] SET configuration_parameter { TO | = } { value | DEFAULT }
-ALTER ROLE { name | ALL } [ IN DATABASE database_name ] SET configuration_parameter FROM CURRENT
-ALTER ROLE { name | ALL } [ IN DATABASE database_name ] RESET configuration_parameter
-ALTER ROLE { name | ALL } [ IN DATABASE database_name ] RESET ALL
-*/
 // Change handles the case where the role name matches, but the details do not
 func (c RoleSchema) Change(obj interface{}) {
 	c2, ok := obj.(*RoleSchema)
@@ -186,6 +158,14 @@ func (c RoleSchema) Change(obj interface{}) {
 			options += " SUPERUSER"
 		} else {
 			options += " NOSUPERUSER"
+		}
+	}
+
+	if c.get("rolcanlogin") != c2.get("rolcanlogin") {
+		if c.get("rolcanlogin") == "true" {
+			options += " LOGIN"
+		} else {
+			options += " NOLOGIN"
 		}
 	}
 

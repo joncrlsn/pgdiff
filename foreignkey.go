@@ -4,6 +4,7 @@ import "sort"
 import "fmt"
 import "database/sql"
 import "github.com/joncrlsn/pgutil"
+import "github.com/joncrlsn/misc"
 
 // ==================================
 // ForeignKeyRows definition
@@ -15,15 +16,16 @@ func (slice ForeignKeyRows) Len() int {
 }
 
 func (slice ForeignKeyRows) Less(i, j int) bool {
-	//fmt.Printf("--Less %s:%s with %s:%s", slice[i]["table_name"], slice[i]["column_name"], slice[j]["table_name"], slice[j]["column_name"])
-	if slice[i]["table_name"] == slice[j]["table_name"] {
+	if slice[i]["table_name"] != slice[j]["table_name"] {
+		return slice[i]["table_name"] < slice[j]["table_name"]
+	}
+	if slice[i]["constraint_def"] != slice[j]["constraint_def"] {
 		return slice[i]["constraint_def"] < slice[j]["constraint_def"]
 	}
 	return slice[i]["table_name"] < slice[j]["table_name"]
 }
 
 func (slice ForeignKeyRows) Swap(i, j int) {
-	//fmt.Printf("--Swapping %d/%s:%s with %d/%s:%s \n", i, slice[i]["table_name"], slice[i]["index_name"], j, slice[j]["table_name"], slice[j]["index_name"])
 	slice[i], slice[j] = slice[j], slice[i]
 }
 
@@ -69,17 +71,17 @@ func (c *ForeignKeySchema) NextRow() bool {
 func (c *ForeignKeySchema) Compare(obj interface{}) int {
 	c2, ok := obj.(*ForeignKeySchema)
 	if !ok {
-		fmt.Println("Error!!!, Change(...) needs a ForeignKeySchema instance", c2)
+		fmt.Println("Error!!!, Compare(obj) needs a ForeignKeySchema instance", c2)
 		return +999
 	}
 
 	//fmt.Printf("Comparing %s with %s", c.get("table_name"), c2.get("table_name"))
-	val := _compareString(c.get("table_name"), c2.get("table_name"))
+	val := misc.CompareStrings(c.get("table_name"), c2.get("table_name"))
 	if val != 0 {
 		return val
 	}
 
-	val = _compareString(c.get("constraint_def"), c2.get("constraint_def"))
+	val = misc.CompareStrings(c.get("constraint_def"), c2.get("constraint_def"))
 	return val
 }
 
@@ -97,7 +99,7 @@ func (c ForeignKeySchema) Drop() {
 func (c *ForeignKeySchema) Change(obj interface{}) {
 	c2, ok := obj.(*ForeignKeySchema)
 	if !ok {
-		fmt.Println("Error!!!, change needs a ForeignKeySchema instance", c2)
+		fmt.Println("Error!!!, Change(obj) needs a ForeignKeySchema instance", c2)
 	}
 	// There is no "changing" a foreign key.  It either gets created or dropped (or left as-is).
 }

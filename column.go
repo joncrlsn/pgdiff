@@ -6,9 +6,10 @@ import "strconv"
 import "strings"
 import "database/sql"
 import "github.com/joncrlsn/pgutil"
+import "github.com/joncrlsn/misc"
 
 // ==================================
-// ColumnRows definition
+// ColumnRows definition (a sortable slice of string maps)
 // ==================================
 type ColumnRows []map[string]string
 
@@ -17,15 +18,13 @@ func (slice ColumnRows) Len() int {
 }
 
 func (slice ColumnRows) Less(i, j int) bool {
-	//fmt.Printf("--Less %s:%s with %s:%s", slice[i]["table_name"], slice[i]["column_name"], slice[j]["table_name"], slice[j]["column_name"])
-	if slice[i]["table_name"] == slice[j]["table_name"] {
-		return slice[i]["column_name"] < slice[j]["column_name"]
+	if slice[i]["table_name"] != slice[j]["table_name"] {
+		return slice[i]["table_name"] < slice[j]["table_name"]
 	}
-	return slice[i]["table_name"] < slice[j]["table_name"]
+	return slice[i]["column_name"] < slice[j]["column_name"]
 }
 
 func (slice ColumnRows) Swap(i, j int) {
-	fmt.Printf("--Swapping %d/%s:%s with %d/%s:%s \n", i, slice[i]["table_name"], slice[i]["column_name"], j, slice[j]["table_name"], slice[j]["column_name"])
 	slice[i], slice[j] = slice[j], slice[i]
 }
 
@@ -63,17 +62,17 @@ func (c *ColumnSchema) NextRow() bool {
 func (c *ColumnSchema) Compare(obj interface{}) int {
 	c2, ok := obj.(*ColumnSchema)
 	if !ok {
-		fmt.Println("Error!!!, change needs a ColumnSchema instance", c2)
+		fmt.Println("Error!!!, Compare needs a ColumnSchema instance", c2)
 	}
 
-	val := _compareString(c.get("table_name"), c2.get("table_name"))
+	val := misc.CompareStrings(c.get("table_name"), c2.get("table_name"))
 	if val != 0 {
 		// Table name differed so return that value
 		return val
 	}
 
 	// Table name was the same so compare column name
-	val = _compareString(c.get("column_name"), c2.get("column_name"))
+	val = misc.CompareStrings(c.get("column_name"), c2.get("column_name"))
 	return val
 }
 
@@ -132,7 +131,7 @@ func (c *ColumnSchema) Change(obj interface{}) {
 		}
 	}
 
-	// TODO: Code and test a column change from integer to bigint
+	// Code and test a column change from integer to bigint
 	if c.get("data_type") != c2.get("data_type") {
 		fmt.Printf("-- WARNING: This type change may not work well: (%s to %s).\n", c2.get("data_type"), c.get("data_type"))
 		if strings.HasPrefix(c.get("data_type"), "character") {
@@ -155,7 +154,7 @@ func (c *ColumnSchema) Change(obj interface{}) {
 		fmt.Printf("ALTER TABLE %s ALTER COLUMN %s SET DEFAULT %s;\n", c.get("table_name"), c.get("column_name"), c.get("column_default"))
 	}
 
-	// TODO Detect not-null and nullable change
+	// Detect not-null and nullable change
 	if c.get("is_nullable") != c2.get("is_nullable") {
 		if c.get("is_nullable") == "YES" {
 			fmt.Printf("ALTER TABLE %s ALTER COLUMN %s DROP NOT NULL;\n", c.get("table_name"), c.get("column_name"))
