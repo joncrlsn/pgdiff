@@ -1,25 +1,52 @@
 package main
 
 import "fmt"
+import "sort"
 import "database/sql"
 import "github.com/joncrlsn/pgutil"
+import "github.com/joncrlsn/misc"
+
+// ==================================
+// TableRows definition (a sortable slice of string maps)
+// ==================================
+type TableRows []map[string]string
+
+func (slice TableRows) Len() int {
+	return len(slice)
+}
+
+func (slice TableRows) Less(i, j int) bool {
+	return slice[i]["table_name"] < slice[j]["table_name"]
+}
+
+func (slice TableRows) Swap(i, j int) {
+	slice[i], slice[j] = slice[j], slice[i]
+}
 
 // TableSchema holds a channel streaming table information from one of the databases as well as
 // a reference to the current row of data we're viewing.
 //
 // TableSchema implements the Schema interface defined in pgdiff.go
 type TableSchema struct {
-	channel chan map[string]string
-	row     map[string]string
-	done    bool
+	rows   TableRows
+	rowNum int
+	done   bool
 }
 
-// NextRow reads from the channel and tells you if there are (probably) more or not
+// get returns the value from the current row for the given key
+func (c *TableSchema) get(key string) string {
+	if c.rowNum >= len(c.rows) {
+		return ""
+	}
+	return c.rows[c.rowNum][key]
+}
+
+// NextRow increments the rowNum and tells you whether or not there are more
 func (c *TableSchema) NextRow() bool {
-	c.row = <-c.channel
-	if len(c.row) == 0 {
+	if c.rowNum >= len(c.rows)-1 {
 		c.done = true
 	}
+	c.rowNum = c.rowNum + 1
 	return !c.done
 }
 
@@ -27,32 +54,31 @@ func (c *TableSchema) NextRow() bool {
 func (c *TableSchema) Compare(obj interface{}) int {
 	c2, ok := obj.(*TableSchema)
 	if !ok {
-		fmt.Println("Error!!!, Change(...) needs a TableSchema instance", c2)
+		fmt.Println("Error!!!, Compare(obj) needs a TableSchema instance", c2)
 		return +999
 	}
 
-	//fmt.Printf("Comparing %s with %s", c.row["table_name"], c2.row["table_name"])
-	val := _compareString(c.row["table_name"], c2.row["table_name"])
+	val := misc.CompareStrings(c.get("table_name"), c2.get("table_name"))
 	return val
 }
 
 // Add returns SQL to add the table
 func (c TableSchema) Add() {
-	fmt.Printf("CREATE TABLE %s();\n", c.row["table_name"])
+	fmt.Printf("CREATE TABLE %s();\n", c.get("table_name"))
 }
 
 // Drop returns SQL to drop the table
 func (c TableSchema) Drop() {
-	fmt.Printf("DROP TABLE IF EXISTS %s;\n", c.row["table_name"])
+	fmt.Printf("DROP TABLE IF EXISTS %s;\n", c.get("table_name"))
 }
 
 // Change handles the case where the table and column match, but the details do not
 func (c TableSchema) Change(obj interface{}) {
 	c2, ok := obj.(*TableSchema)
 	if !ok {
-		fmt.Println("Error!!!, change needs a TableSchema instance", c2)
+		fmt.Println("Error!!!, Change needs a TableSchema instance", c2)
 	}
-	//fmt.Printf("Change Table? %s - %s\n", c.row["table_name"], c2.row["table_name"])
+	// There's nothing we need to do here
 }
 
 // compareTables outputs SQL to make the table names match between DBs
@@ -70,9 +96,21 @@ ORDER BY table_name COLLATE "C" ASC;`
 	rowChan1, _ := pgutil.QueryStrings(conn1, sql)
 	rowChan2, _ := pgutil.QueryStrings(conn2, sql)
 
-	// We have to explicitly type this as Schema for some reason
-	var schema1 Schema = &TableSchema{channel: rowChan1}
-	var schema2 Schema = &TableSchema{channel: rowChan2}
+	rows1 := make(TableRows, 0)
+	for row := range rowChan1 {
+		rows1 = append(rows1, row)
+	}
+	sort.Sort(rows1)
+
+	rows2 := make(TableRows, 0)
+	for row := range rowChan2 {
+		rows2 = append(rows2, row)
+	}
+	sort.Sort(rows2)
+
+	// We have to explicitly type this as Schema here for some unknown reason
+	var schema1 Schema = &TableSchema{rows: rows1, rowNum: -1}
+	var schema2 Schema = &TableSchema{rows: rows2, rowNum: -1}
 
 	// Compare the tables
 	doDiff(schema1, schema2)

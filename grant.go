@@ -25,44 +25,6 @@ var permMap map[string]string = map[string]string{
 	"T": "TEMPORARY",
 }
 
-// ==================================
-// Functions
-// ==================================
-
-//
-// RoleAcls (a sortable slice of RoleAcl instances)
-//
-type RoleAcls []RoleAcl
-
-func (slice RoleAcls) Len() int {
-	return len(slice)
-}
-
-func (slice RoleAcls) Less(i, j int) bool {
-	return slice[i].role < slice[j].role
-}
-
-func (slice RoleAcls) Swap(i, j int) {
-	slice[i], slice[j] = slice[j], slice[i]
-}
-
-func (slice RoleAcls) get(role string) RoleAcl {
-	for _, roleAcl := range slice {
-		if roleAcl.role == role {
-			return roleAcl
-		}
-	}
-	return RoleAcl{role: "", grants: []string{}}
-}
-
-//
-// RoleAcl
-//
-type RoleAcl struct {
-	role   string
-	grants []string
-}
-
 /*
 parseGrants converts an ACL (access control list) line into a role and a slice of permission strings
 
@@ -106,7 +68,8 @@ func parseGrants(acl string) (string, []string) {
 	return role, permWords
 }
 
-// parseAcl parses an ACL (access control list) string (e.g. 'c42=aur/postgres')  into a role and some permissions
+// parseAcl parses an ACL (access control list) string (e.g. 'c42=aur/postgres') into a role and
+// a string made up of one-character permissions
 func parseAcl(acl string) (role string, perms string) {
 	role, perms = "", ""
 	matches := aclRegex.FindStringSubmatch(acl)

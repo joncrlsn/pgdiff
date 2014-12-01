@@ -4,6 +4,7 @@ import "fmt"
 import "database/sql"
 import "sort"
 import "github.com/joncrlsn/pgutil"
+import "github.com/joncrlsn/misc"
 
 // ==================================
 // OwnerRows definition (an array of string maps)
@@ -68,7 +69,7 @@ func (c *OwnerSchema) Compare(obj interface{}) int {
 		return +999
 	}
 
-	val := _compareString(c.get("relationship_name"), c2.get("relationship_name"))
+	val := misc.CompareStrings(c.get("relationship_name"), c2.get("relationship_name"))
 	return val
 }
 
