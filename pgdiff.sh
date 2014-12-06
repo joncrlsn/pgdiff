@@ -1,6 +1,12 @@
 #!/bin/bash
 #
-# pgdiff -U1 c42 -pw1 c422006 -d1 prd-cpc -o1 sslmode=disable -U2 c42 -pw2 c422006 -d2 cp_staging -o2 sslmode=disable COLUMN
+# pgdiff.sh runs a compare on each database type in the proper order.  At each step you are allowed to review 
+# and optionally change and/or run the generated SQL.
+#
+# If you convert this to a windows batch file, please share it.
+#
+# pgdiff -U1 postgres -pw1 supersecret -d1 maindb -o1 sslmode=disable -U2 postgres -pw2 supersecret -d2 stagingdb -o2 sslmode=disable COLUMN
+#
 
 USER1=c42
 HOST1=dbwan
