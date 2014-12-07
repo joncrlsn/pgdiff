@@ -15,8 +15,10 @@ import "github.com/joncrlsn/pgutil"
 import "github.com/joncrlsn/misc"
 
 // ==================================
-// ColumnRows definition (a sortable slice of string maps)
+// Column Rows definition
 // ==================================
+
+// ColumnRows is a sortable slice of string maps
 type ColumnRows []map[string]string
 
 func (slice ColumnRows) Len() int {

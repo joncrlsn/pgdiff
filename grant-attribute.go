@@ -14,8 +14,10 @@ import "github.com/joncrlsn/pgutil"
 import "github.com/joncrlsn/misc"
 
 // ==================================
-// GrantAttributeRows definition (an array of string maps)
+// GrantAttributeRows definition
 // ==================================
+
+// GrantAttributeRows is a sortable slice of string maps
 type GrantAttributeRows []map[string]string
 
 func (slice GrantAttributeRows) Len() int {
@@ -140,7 +142,7 @@ func (c *GrantAttributeSchema) Change(obj interface{}) {
 
 	// Find grants in the first db that are not in the second
 	// (for this relationship and owner)
-	grantList := make([]string, 0)
+	var grantList []string
 	for _, g := range grants1 {
 		if !misc.ContainsString(grants2, g) {
 			grantList = append(grantList, g)
@@ -152,7 +154,7 @@ func (c *GrantAttributeSchema) Change(obj interface{}) {
 
 	// Find grants in the second db that are not in the first
 	// (for this relationship and owner)
-	revokeList := make([]string, 0)
+	var revokeList []string
 	for _, g := range grants2 {
 		if !misc.ContainsString(grants1, g) {
 			revokeList = append(revokeList, g)

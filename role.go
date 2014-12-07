@@ -12,9 +12,7 @@ import "sort"
 import "github.com/joncrlsn/pgutil"
 import "github.com/joncrlsn/misc"
 
-// ==================================
-// RoleRows definition (a sortable slice of string maps)
-// ==================================
+// RoleRows is a sortable slice of string maps
 type RoleRows []map[string]string
 
 func (slice RoleRows) Len() int {
@@ -101,6 +99,7 @@ where option can be:
     | USER role_name [, ...]
     | SYSID uid
 */
+
 // Add generates SQL to add the constraint/index
 func (c RoleSchema) Add() {
 	// We don't care about efficiency here so we just concat strings

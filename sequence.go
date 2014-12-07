@@ -13,8 +13,10 @@ import "github.com/joncrlsn/pgutil"
 import "github.com/joncrlsn/misc"
 
 // ==================================
-// SequenceRows definition (an slice of string maps)
+// SequenceRows definition
 // ==================================
+
+// SequenceRows is a sortable slice of string maps
 type SequenceRows []map[string]string
 
 func (slice SequenceRows) Len() int {

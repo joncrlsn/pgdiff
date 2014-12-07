@@ -13,8 +13,10 @@ import "github.com/joncrlsn/pgutil"
 import "github.com/joncrlsn/misc"
 
 // ==================================
-// TableRows definition (a sortable slice of string maps)
+// TableRows definition
 // ==================================
+
+// TableRows is a sortable slice of string maps
 type TableRows []map[string]string
 
 func (slice TableRows) Len() int {
