@@ -12,9 +12,7 @@ import "database/sql"
 import "github.com/joncrlsn/pgutil"
 import "github.com/joncrlsn/misc"
 
-// ==================================
-// ForeignKeyRows definition
-// ==================================
+// ForeignKeyRows is a sortable string map
 type ForeignKeyRows []map[string]string
 
 func (slice ForeignKeyRows) Len() int {

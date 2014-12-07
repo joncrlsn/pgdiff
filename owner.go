@@ -13,8 +13,10 @@ import "github.com/joncrlsn/pgutil"
 import "github.com/joncrlsn/misc"
 
 // ==================================
-// OwnerRows definition (an array of string maps)
+// OwnerRows definition
 // ==================================
+
+// OwnerRows is a sortable slice of string maps
 type OwnerRows []map[string]string
 
 func (slice OwnerRows) Len() int {

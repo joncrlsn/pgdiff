@@ -15,7 +15,7 @@ import "regexp"
 
 var aclRegex = regexp.MustCompile(`([a-zA-Z0-9]+)*=([rwadDxtXUCcT]+)/([a-zA-Z0-9]+)$`)
 
-var permMap map[string]string = map[string]string{
+var permMap = map[string]string{
 	"a": "INSERT",
 	"r": "SELECT",
 	"w": "UPDATE",

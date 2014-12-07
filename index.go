@@ -15,6 +15,8 @@ import "github.com/joncrlsn/pgutil"
 // ==================================
 // IndexRows definition
 // ==================================
+
+// IndexRows is a sortable slice of string maps
 type IndexRows []map[string]string
 
 func (slice IndexRows) Len() int {
