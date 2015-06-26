@@ -226,7 +226,9 @@ JOIN pg_catalog.pg_class AS c ON (c.oid = i.indrelid)
 JOIN pg_catalog.pg_class AS c2 ON (c2.oid = i.indexrelid)
 LEFT JOIN pg_catalog.pg_constraint con
     ON (con.conrelid = i.indrelid AND con.conindid = i.indexrelid AND con.contype IN ('p','u','x'))
+JOIN pg_catalog.pg_namespace AS n ON  (c2.relnamespace = n.oid)
 WHERE c.relname NOT LIKE 'pg_%'
+and n.nspname = 'public'
 --AND c.relname = 't_org'
 --ORDER BY c.relname, c2.relname;
 `
