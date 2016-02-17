@@ -11,6 +11,7 @@ import "fmt"
 import "strings"
 import "database/sql"
 import "github.com/joncrlsn/pgutil"
+import "github.com/joncrlsn/misc"
 
 // ==================================
 // IndexRows definition
@@ -86,14 +87,14 @@ func (c *IndexSchema) Compare(obj interface{}) int {
 		fmt.Printf("--Comparing (table_name or index_name is empty): %v\n--           %v\n", c.getRow(), c2.getRow())
 	}
 
-	val := _compareString(c.get("table_name"), c2.get("table_name"))
+	val := misc.CompareStrings(c.get("table_name"), c2.get("table_name"))
 	if val != 0 {
 		// Table name differed so return that value
 		return val
 	}
 
 	// Table name was the same so compare index name
-	val = _compareString(c.get("index_name"), c2.get("index_name"))
+	val = misc.CompareStrings(c.get("index_name"), c2.get("index_name"))
 	return val
 }
 

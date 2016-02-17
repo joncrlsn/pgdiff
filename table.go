@@ -67,17 +67,22 @@ func (c *TableSchema) Compare(obj interface{}) int {
 	}
 
 	val := misc.CompareStrings(c.get("table_name"), c2.get("table_name"))
+	//fmt.Printf("-- Compared %v: %s with %s \n", val, c.get("table_name"), c2.get("table_name"))
 	return val
 }
 
-// Add returns SQL to add the table
+// Add returns SQL to add the table or view
 func (c TableSchema) Add() {
-	fmt.Printf("CREATE TABLE %s();\n", c.get("table_name"))
+	fmt.Printf("CREATE %s %s();", c.get("table_type"), c.get("table_name"))
+	if "VIEW" == c.get("table_type") {
+		fmt.Printf(" -- pgdiff does not (yet) generate view definitions")
+	}
+	fmt.Println()
 }
 
-// Drop returns SQL to drop the table
+// Drop returns SQL to drop the table or view
 func (c TableSchema) Drop() {
-	fmt.Printf("DROP TABLE IF EXISTS %s;\n", c.get("table_name"))
+	fmt.Printf("DROP %s IF EXISTS %s;\n", c.get("table_type"), c.get("table_name"))
 }
 
 // Change handles the case where the table and column match, but the details do not
@@ -93,11 +98,11 @@ func (c TableSchema) Change(obj interface{}) {
 func compareTables(conn1 *sql.DB, conn2 *sql.DB) {
 	sql := `
 SELECT table_name
-    , table_type
+    , CASE table_type WHEN 'BASE_TABLE' THEN 'TABLE' ELSE table_type END AS table_type
     , is_insertable_into
 FROM information_schema.tables 
 WHERE table_schema = 'public' 
-AND (table_type = 'BASE TABLE' --OR table_type = 'VIEW'
+AND (table_type = 'BASE TABLE' OR table_type = 'VIEW'
 )
 ORDER BY table_name COLLATE "C" ASC;`
 
