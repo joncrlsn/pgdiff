@@ -86,7 +86,7 @@ func (c OwnerSchema) Add() {
 	if c.get("type") == "TABLE" || c.get("type") == "SEQUENCE" {
 		fmt.Printf("-- Notice, db2 has no %s. You probably need to run pgdiff with the %s option first.\n", c.get("relationship_name"), c.get("type"))
 	} else if c.get("type") == "VIEW" {
-		fmt.Printf("-- Notice, db2 has no view named %s. pgdiff does not yet compare view definitions.\n", c.get("relationship_name"))
+		fmt.Printf("-- Notice, db2 has no view named %s.  Cannot compare owners.  (pgdiff does not (yet?) generate view definitions)\n", c.get("relationship_name"))
 	}
 }
 
@@ -95,7 +95,7 @@ func (c OwnerSchema) Drop() {
 	if c.get("type") == "TABLE" || c.get("type") == "SEQUENCE" {
 		fmt.Printf("-- Notice, db2 has a %s that db1 does not: %s. \n", c.get("type"), c.get("relationship_name"))
 	} else if c.get("type") == "VIEW" {
-		fmt.Printf("-- Notice, db2 has a view that db1 does not: %s. pgdiff does not yet compare view definitions.\n", c.get("relationship_name"))
+		fmt.Printf("-- Notice, db2 has a view that db1 does not: %s.  Cannot compare owners.\n", c.get("relationship_name"))
 	}
 }
 
