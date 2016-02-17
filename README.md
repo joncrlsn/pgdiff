@@ -1,6 +1,6 @@
 # pgdiff - PostgreSQL schema diff
 
-pgdiff compares the schema between two PostgreSQL databases and generates alter statements to be *manually* run against the second database.  The provided pgdiff.sh script helps automate the process.  At the moment, not everything in the schema is compared, but the things considered important are: roles, sequences, tables, columns (and their default values), primary keys, unique constraints, foreign keys, roles, ownership information, and grants. 
+pgdiff compares the schema between two PostgreSQL 9 databases and generates alter statements to be *manually* run against the second database.  The provided pgdiff.sh script helps automate the process.  At the moment, not everything in the schema is compared, but the things considered important are: roles, sequences, tables, columns (and their default values), primary keys, unique constraints, foreign keys, roles, ownership information, and grants. 
 
 An important feature is that pgdiff never modifies a database directly. You alone are responsible for verifying the generated SQL *before* running it against your database, so you can have confidence this is safe to try and see what SQL gets generated.
 
