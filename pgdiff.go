@@ -67,7 +67,7 @@ func main() {
 	}
 
 	if len(args) == 0 {
-		fmt.Println("The required first argument is SchemaType: ROLE, SEQUENCE, TABLE, COLUMN, INDEX, FOREIGN_KEY, OWNER, GRANT_RELATIONSHIP, GRANT_ATTRIBUTE")
+		fmt.Println("The required first argument is SchemaType: ROLE, SEQUENCE, TABLE, VIEW, COLUMN, INDEX, FOREIGN_KEY, OWNER, GRANT_RELATIONSHIP, GRANT_ATTRIBUTE")
 		os.Exit(1)
 	}
 	schemaType = strings.ToUpper(args[0])
@@ -75,7 +75,7 @@ func main() {
 
 	fmt.Println("-- db1:", dbInfo1)
 	fmt.Println("-- db2:", dbInfo2)
-	fmt.Println("-- Run the following SQL againt db2:")
+	fmt.Println("-- Run the following SQL against db2:")
 
 	conn1, err := dbInfo1.Open()
 	check("opening database 1", err)
@@ -92,10 +92,13 @@ func main() {
 		compareTables(conn1, conn2)
 		compareColumns(conn1, conn2)
 		compareIndexes(conn1, conn2) // includes PK and Unique constraints
+		compareViews(conn1, conn2)
+		compareFunctions(conn1, conn2)
 		compareForeignKeys(conn1, conn2)
 		compareOwners(conn1, conn2)
 		compareGrantRelationships(conn1, conn2)
 		compareGrantAttributes(conn1, conn2)
+		compareTriggers(conn1, conn2)
 	} else if schemaType == "ROLE" {
 		compareRoles(conn1, conn2)
 	} else if schemaType == "SEQUENCE" {
@@ -104,6 +107,10 @@ func main() {
 		compareTables(conn1, conn2)
 	} else if schemaType == "COLUMN" {
 		compareColumns(conn1, conn2)
+	} else if schemaType == "FUNCTION" {
+		compareFunctions(conn1, conn2)
+	} else if schemaType == "VIEW" {
+		compareViews(conn1, conn2)
 	} else if schemaType == "INDEX" {
 		compareIndexes(conn1, conn2)
 	} else if schemaType == "FOREIGN_KEY" {
@@ -114,6 +121,8 @@ func main() {
 		compareGrantRelationships(conn1, conn2)
 	} else if schemaType == "GRANT_ATTRIBUTE" {
 		compareGrantAttributes(conn1, conn2)
+	} else if schemaType == "TRIGGER" {
+		compareTriggers(conn1, conn2)
 	} else {
 		fmt.Println("Not yet handled:", schemaType)
 	}
@@ -178,7 +187,7 @@ Options:
   -D, --dbname1 : first database name 
   -d, --dbname2 : second database name 
 
-<schemaTpe> can be: ROLE, SEQUENCE, TABLE, COLUMN, INDEX, FOREIGN_KEY, OWNER, GRANT_RELATIONSHIP, GRANT_ATTRIBUTE
+<schemaTpe> can be: ROLE, SEQUENCE, TABLE, VIEW, COLUMN, INDEX, FOREIGN_KEY, OWNER, GRANT_RELATIONSHIP, GRANT_ATTRIBUTE
 `)
 
 	os.Exit(2)

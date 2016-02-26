@@ -1,6 +1,6 @@
 #!/bin/bash
 #
-# pgdiff.sh runs a compare on each schema type in the proper order.  At each step you are allowed to review 
+# pgdiff.sh runs a compare on each schema type in the order that creates the fewest conflicts.  At each step you are allowed to review 
 # and optionally change and/or run the generated SQL.
 #
 # If you convert this to a windows batch file, please share it.
@@ -36,7 +36,7 @@ function rundiff() {
     ((i++))
     local TYPE=$1
     local sqlFile="${i}-${TYPE}.sql"
-    echo "Generating diff for $TYPE... $PASS1"
+    echo "Generating diff for $TYPE... "
     ./pgdiff -U "$USER1" -W "$PASS1" -H "$HOST1" -D "$NAME1" -O "$OPT1" \
            -u "$USER2" -w "$PASS2" -h "$HOST2" -d "$NAME2" -o "$OPT2" \
            $TYPE > "$sqlFile"
@@ -50,15 +50,18 @@ function rundiff() {
     echo
 }
 
-rundiff ROLE
-rundiff SEQUENCE
+rundiff FUNCTION
+#rundiff ROLE
+#rundiff SEQUENCE
 rundiff TABLE
-rundiff OWNER
+#rundiff VIEW
+#rundiff OWNER
 rundiff COLUMN
-rundiff INDEX
-rundiff FOREIGN_KEY
-rundiff GRANT_RELATIONSHIP
-rundiff GRANT_ATTRIBUTE
+#rundiff INDEX
+#rundiff FOREIGN_KEY
+#rundiff GRANT_RELATIONSHIP
+#rundiff GRANT_ATTRIBUTE
+rundiff TRIGGER
 
 echo "Done!"
 

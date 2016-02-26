@@ -74,9 +74,6 @@ func (c *TableSchema) Compare(obj interface{}) int {
 // Add returns SQL to add the table or view
 func (c TableSchema) Add() {
 	fmt.Printf("CREATE %s %s();", c.get("table_type"), c.get("table_name"))
-	if "VIEW" == c.get("table_type") {
-		fmt.Printf(" -- pgdiff does not (yet) generate view definitions")
-	}
 	fmt.Println()
 }
 
@@ -98,13 +95,12 @@ func (c TableSchema) Change(obj interface{}) {
 func compareTables(conn1 *sql.DB, conn2 *sql.DB) {
 	sql := `
 SELECT table_name
-    , CASE table_type WHEN 'BASE_TABLE' THEN 'TABLE' ELSE table_type END AS table_type
+    , CASE table_type WHEN 'BASE TABLE' THEN 'TABLE' ELSE table_type END AS table_type
     , is_insertable_into
 FROM information_schema.tables 
 WHERE table_schema = 'public' 
-AND (table_type = 'BASE TABLE' OR table_type = 'VIEW'
-)
-ORDER BY table_name COLLATE "C" ASC;`
+AND table_type = 'BASE TABLE'
+ORDER BY table_name;`
 
 	rowChan1, _ := pgutil.QueryStrings(conn1, sql)
 	rowChan2, _ := pgutil.QueryStrings(conn2, sql)
@@ -121,7 +117,7 @@ ORDER BY table_name COLLATE "C" ASC;`
 	}
 	sort.Sort(rows2)
 
-	// We have to explicitly type this as Schema here for some unknown reason
+	// We have to explicitly type this as Schema here
 	var schema1 Schema = &TableSchema{rows: rows1, rowNum: -1}
 	var schema2 Schema = &TableSchema{rows: rows2, rowNum: -1}
 
