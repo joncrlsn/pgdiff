@@ -89,10 +89,13 @@ func (c *ColumnSchema) Add() {
 	if c.get("data_type") == "character varying" {
 		maxLength, valid := getMaxLength(c.get("character_maximum_length"))
 		if !valid {
-			fmt.Println("-- WARNING: varchar column has no maximum length.  Set to 1024")
+			fmt.Println("-- WARNING: varchar column has no maximum length.  Setting to 1024, which could result in data loss")
 		}
 		fmt.Printf("ALTER TABLE %s ADD COLUMN %s %s(%s)", c.get("table_name"), c.get("column_name"), c.get("data_type"), maxLength)
 	} else {
+		if c.get("data_type") == "ARRAY" {
+			fmt.Println("-- Note that adding of array data types are not yet generated properly.")
+		}
 		fmt.Printf("ALTER TABLE %s ADD COLUMN %s %s", c.get("table_name"), c.get("column_name"), c.get("data_type"))
 	}
 
@@ -124,15 +127,15 @@ func (c *ColumnSchema) Change(obj interface{}) {
 			max1, max1Valid := getMaxLength(c.get("character_maximum_length"))
 			max2, max2Valid := getMaxLength(c2.get("character_maximum_length"))
 			if (max1Valid || !max2Valid) && (max1 != c2.get("character_maximum_length")) {
-				if !max1Valid {
-					fmt.Println("-- WARNING: varchar column has no maximum length.  Setting to 1024")
-				}
+				//if !max1Valid {
+				//    fmt.Println("-- WARNING: varchar column has no maximum length.  Setting to 1024, which may result in data loss.")
+				//}
 				max1Int, err1 := strconv.Atoi(max1)
 				check("converting string to int", err1)
 				max2Int, err2 := strconv.Atoi(max2)
 				check("converting string to int", err2)
 				if max1Int < max2Int {
-					fmt.Println("-- WARNING: The next statement will shorten a character varying column.")
+					fmt.Println("-- WARNING: The next statement will shorten a character varying column, which may result in data loss.")
 				}
 				fmt.Printf("ALTER TABLE %s ALTER COLUMN %s TYPE character varying(%s);\n", c.get("table_name"), c.get("column_name"), max1)
 			}
@@ -190,8 +193,7 @@ SELECT table_name
 FROM information_schema.columns 
 WHERE table_schema = 'public'
 AND is_updatable = 'YES'
--- We do not depend on this sorting correctly
-ORDER BY table_name, column_name COLLATE "C" ASC;`
+ORDER BY table_name, column_name;`
 
 	rowChan1, _ := pgutil.QueryStrings(conn1, sql)
 	rowChan2, _ := pgutil.QueryStrings(conn2, sql)
