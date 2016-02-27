@@ -1,9 +1,9 @@
 #!/bin/bash
 #
-# pgdiff.sh runs a compare on each schema type in the order that creates the fewest conflicts.  At each step you are allowed to review 
-# and optionally change and/or run the generated SQL.
+# pgdiff.sh runs a compare on each schema type in the order that usually creates the fewest conflicts.  
+# At each step you are allowed to review  and optionally change and/or run the generated SQL.
 #
-# If you convert this to a windows batch file, please share it.
+# If you convert this to a windows batch file (or, even better, a Go program), please share it.
 #
 # pgdiff -U postgres -W supersecret -D maindb -O sslmode=disable -u postgres -w supersecret -d stagingdb -o sslmode=disable COLUMN
 #
@@ -51,16 +51,16 @@ function rundiff() {
 }
 
 rundiff FUNCTION
-#rundiff ROLE
-#rundiff SEQUENCE
+rundiff ROLE
+rundiff SEQUENCE
 rundiff TABLE
-#rundiff VIEW
-#rundiff OWNER
+rundiff VIEW
+rundiff OWNER
 rundiff COLUMN
-#rundiff INDEX
-#rundiff FOREIGN_KEY
-#rundiff GRANT_RELATIONSHIP
-#rundiff GRANT_ATTRIBUTE
+rundiff INDEX
+rundiff FOREIGN_KEY
+rundiff GRANT_RELATIONSHIP
+rundiff GRANT_ATTRIBUTE
 rundiff TRIGGER
 
 echo "Done!"
