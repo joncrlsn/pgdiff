@@ -57,6 +57,6 @@ options           | explanation
 
 ### todo
 1. fix SQL for adding an array column
+1. add windows version of pgdiff.sh (or even better: re-write it in Go)
 1. allow editing of individual SQL lines after failure (this would be done in the script pgdiff.sh)
 1. store failed SQL statements in an error file for later fixing and rerunning?
-1. add windows script (or even better: re-write bash script in Go)
