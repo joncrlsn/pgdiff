@@ -8,15 +8,17 @@ pgdiff is written to be easy to expand and improve the accuracy of the diff.
 
 
 ### download
-[osx](https://github.com/joncrlsn/pgdiff/raw/master/bin-osx/pgdiff "OSX version") &nbsp; [linux](https://github.com/joncrlsn/pgdiff/raw/master/bin-linux/pgdiff "Linux version") &nbsp;  [windows](https://github.com/joncrlsn/pgdiff/raw/master/bin-win/pgdiff.exe "Windows version")
+[osx](https://github.com/joncrlsn/pgdiff/raw/master/bin-osx/pgdiff "OSX version") &nbsp; [linux](https://github.com/joncrlsn/pgdiff/raw/master/bin-linux/pgdiff "Linux version") &nbsp; [windows](https://github.com/joncrlsn/pgdiff/raw/master/bin-win/pgdiff.exe "Windows version")
 
 
 ### usage
 	pgdiff [options] <schemaType>
 
- (where options are defined below and &lt;schemaType&gt; can be: ROLE, SEQUENCE, TABLE, COLUMN, INDEX, FUNCTION, VIEW, FOREIGN\_KEY, OWNER, GRANT\_RELATIONSHIP, GRANT\_ATTRIBUTE, TRIGGER)
+(where options and &lt;schemaType&gt; are listed below)
 
 I've found that there is an ideal order for running the different schema types.  This order should minimize the problems you encounter.  For example, you'll always want to add new tables before you add new columns.  This is the order that has worked for me, however "your mileage may vary".
+
+Schema type ordering:
 
 1. FUNCTION
 1. ROLE
