@@ -45,7 +45,7 @@ function rundiff() {
     vi "$sqlFile"
     echo -n "Do you wish to run this against ${NAME2}? [yN]: "; read x
     if [[ $x =~ ^y ]]; then
-       PGPASSWORD="$PASS2" pgrun -U $USER2 -h $HOST2 -d $NAME2 -O "$OPT2" -f "$sqlFile"
+       PGPASSWORD="$PASS2" ./pgrun -U $USER2 -h $HOST2 -d $NAME2 -O "$OPT2" -f "$sqlFile"
     fi
     echo
 }
@@ -54,9 +54,9 @@ rundiff FUNCTION
 rundiff ROLE
 rundiff SEQUENCE
 rundiff TABLE
+rundiff COLUMN
 rundiff VIEW
 rundiff OWNER
-rundiff COLUMN
 rundiff INDEX
 rundiff FOREIGN_KEY
 rundiff GRANT_RELATIONSHIP
