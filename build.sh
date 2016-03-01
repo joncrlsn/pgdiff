@@ -1,4 +1,10 @@
 #!/bin/bash -x
+#
+# For OSX and Linux, this script:
+#  * builds pgdiff 
+#  * downloads pgrun 
+#  * combines them and pgdiff.sh into a tgz file
+#
 
 SCRIPT_DIR="$(dirname `ls -l $0 | awk '{ print $NF }'`)"
 
@@ -45,7 +51,7 @@ if [[ -d bin-osx ]]; then
     COPYFILE_DISABLE=true tar -cvzf "${APPNAME}.tgz" $APPNAME
     cd -
     mv "${tempdir}/${APPNAME}.tgz" "${SCRIPT_DIR}/bin-osx/"
-    echo "Built osx32."
+    echo "Built osx."
 else
     echo "Skipping osx.  No bin-osx directory."
 fi
