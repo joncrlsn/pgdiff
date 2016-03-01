@@ -1,45 +1,65 @@
-#!/bin/bash
+#!/bin/bash -x
+#
+# For OSX and Linux, this script:
+#  * builds pgdiff 
+#  * downloads pgrun 
+#  * combines them and pgdiff.sh into a tgz file
+#
 
-appname=pgdiff
+SCRIPT_DIR="$(dirname `ls -l $0 | awk '{ print $NF }'`)"
 
-if [[ -d bin-linux32 ]]; then
-    GOOS=linux GOARCH=386 go build -o bin-linux32/${appname}
-    echo "Built linux32."
+[[ -z $APPNAME ]] && APPNAME=pgdiff
+
+if [[ -d bin-linux ]]; then
+    echo "  ==== Building Linux ===="
+    tempdir="$(mktemp -d -t $APPNAME)"
+    workdir="$tempdir/$APPNAME"
+    echo $workdir
+    mkdir -p $workdir
+    # Build the executable
+    GOOS=linux GOARCH=386 go build -o "$workdir/$APPNAME"
+    # Download pgrun to the temp directory 
+    wget -O "$workdir/pgrun" "https://github.com/joncrlsn/pgrun/raw/master/bin-linux/pgrun"
+    # Copy the bash runtime script to the temp directory
+    cp pgdiff.sh "$workdir/"
+    cd "$tempdir"
+    # Make everything executable
+    chmod -v ugo+x $APPNAME/*
+    COPYFILE_DISABLE=true tar -cvzf "${APPNAME}.tgz" $APPNAME
+    cd -
+    mv "${tempdir}/${APPNAME}.tgz" "${SCRIPT_DIR}/bin-linux/"
+    echo "Built linux."
 else
-    echo "Skipping linux32.  No bin-linux32 directory."
+    echo "Skipping linux.  No bin-linux directory."
 fi
 
-if [[ -d bin-linux64 ]]; then
-    GOOS=linux GOARCH=amd64 go build -o bin-linux64/${appname}
-    echo "Built linux64."
+if [[ -d bin-osx ]]; then
+    echo "  ==== Building OSX ===="
+    tempdir="$(mktemp -d -t $APPNAME)"
+    workdir="$tempdir/$APPNAME"
+    echo $workdir
+    mkdir -p $workdir
+    # Build the executable
+    GOOS=darwin GOARCH=386 go build -o "$workdir/$APPNAME"
+    # Download pgrun to the work directory 
+    wget -O "$workdir/pgrun" "https://github.com/joncrlsn/pgrun/raw/master/bin-osx/pgrun"
+    # Copy the bash runtime script to the temp directory
+    cp pgdiff.sh "$workdir/"
+    cd "$tempdir"
+    # Make everything executable
+    chmod -v ugo+x $APPNAME/*
+    COPYFILE_DISABLE=true tar -cvzf "${APPNAME}.tgz" $APPNAME
+    cd -
+    mv "${tempdir}/${APPNAME}.tgz" "${SCRIPT_DIR}/bin-osx/"
+    echo "Built osx."
 else
-    echo "Skipping linux64.  No bin-linux64 directory."
+    echo "Skipping osx.  No bin-osx directory."
 fi
 
-if [[ -d bin-osx32 ]]; then
-    GOOS=darwin GOARCH=386 go build -o bin-osx32/${appname}
-    echo "Built osx32."
+if [[ -d bin-win ]]; then
+    echo "  ==== Building Windows ===="
+    GOOS=windows GOARCH=386 go build -o bin-win/${APPNAME}.exe
+    echo "Built win."
 else
-    echo "Skipping osx32.  No bin-osx32 directory."
-fi
-
-if [[ -d bin-osx64 ]]; then
-    GOOS=darwin GOARCH=amd64 go build -o bin-osx64/${appname}
-    echo "Built osx64."
-else
-    echo "Skipping osx64.  No bin-osx64 directory."
-fi
-
-if [[ -d bin-win32 ]]; then
-    GOOS=windows GOARCH=386 go build -o bin-win32/${appname}.exe
-    echo "Built win32."
-else
-    echo "Skipping win32.  No bin-win32 directory."
-fi
-
-if [[ -d bin-win64 ]]; then
-    GOOS=windows GOARCH=amd64 go build -o bin-win64/${appname}.exe
-    echo "Built win64."
-else
-    echo "Skipping win64.  No bin-win64 directory."
+    echo "Skipping win.  No bin-win directory."
 fi

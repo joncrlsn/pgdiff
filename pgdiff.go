@@ -1,6 +1,6 @@
 //
-// Copyright (c) 2014 Jon Carlson.  All rights reserved.
-// Use of this source code is governed by an MIT-style
+// Copyright (c) 2016 Jon Carlson.  All rights reserved.
+// Use of this source code is governed by the MIT
 // license that can be found in the LICENSE file.
 //
 
@@ -8,7 +8,7 @@ package main
 
 import "fmt"
 import "log"
-import "flag"
+import flag "github.com/ogier/pflag"
 import "os"
 import "strings"
 import _ "github.com/lib/pq"
@@ -24,10 +24,16 @@ type Schema interface {
 	NextRow() bool
 }
 
-var args []string
-var dbInfo1 pgutil.DbInfo
-var dbInfo2 pgutil.DbInfo
-var schemaType string
+const (
+	version = "0.9.1"
+)
+
+var (
+	args       []string
+	dbInfo1    pgutil.DbInfo
+	dbInfo2    pgutil.DbInfo
+	schemaType string
+)
 
 /*
  * Initialize anything needed later
@@ -40,18 +46,36 @@ func init() {
  */
 func main() {
 
+	var helpPtr = flag.BoolP("help", "?", false, "print help information")
+	var versionPtr = flag.BoolP("version", "V", false, "print version information")
+
 	dbInfo1, dbInfo2 = parseFlags()
-	fmt.Println("-- db1:", dbInfo1)
-	fmt.Println("-- db2:", dbInfo2)
-	fmt.Println("-- Run the following SQL againt db2:")
 
 	// Remaining args:
 	args = flag.Args()
+
+	if *helpPtr {
+		usage()
+	}
+
+	if *versionPtr {
+		fmt.Fprintf(os.Stderr, "%s - version %s\n", os.Args[0], version)
+		fmt.Fprintln(os.Stderr, "Copyright (c) 2016 Jon Carlson.  All rights reserved.")
+		fmt.Fprintln(os.Stderr, "Use of this source code is governed by the MIT license")
+		fmt.Fprintln(os.Stderr, "that can be found here: http://opensource.org/licenses/MIT")
+		os.Exit(1)
+	}
+
 	if len(args) == 0 {
-		fmt.Println("The required first argument is SchemaType: ROLE, SEQUENCE, TABLE, COLUMN, INDEX, FOREIGN_KEY, OWNER, GRANT_RELATIONSHIP, GRANT_ATTRIBUTE")
+		fmt.Println("The required first argument is SchemaType: ROLE, SEQUENCE, TABLE, VIEW, COLUMN, INDEX, FOREIGN_KEY, OWNER, GRANT_RELATIONSHIP, GRANT_ATTRIBUTE")
 		os.Exit(1)
 	}
 	schemaType = strings.ToUpper(args[0])
+	fmt.Println("-- schemaType:", schemaType)
+
+	fmt.Println("-- db1:", dbInfo1)
+	fmt.Println("-- db2:", dbInfo2)
+	fmt.Println("-- Run the following SQL against db2:")
 
 	conn1, err := dbInfo1.Open()
 	check("opening database 1", err)
@@ -68,10 +92,13 @@ func main() {
 		compareTables(conn1, conn2)
 		compareColumns(conn1, conn2)
 		compareIndexes(conn1, conn2) // includes PK and Unique constraints
+		compareViews(conn1, conn2)
+		compareFunctions(conn1, conn2)
 		compareForeignKeys(conn1, conn2)
 		compareOwners(conn1, conn2)
 		compareGrantRelationships(conn1, conn2)
 		compareGrantAttributes(conn1, conn2)
+		compareTriggers(conn1, conn2)
 	} else if schemaType == "ROLE" {
 		compareRoles(conn1, conn2)
 	} else if schemaType == "SEQUENCE" {
@@ -80,6 +107,10 @@ func main() {
 		compareTables(conn1, conn2)
 	} else if schemaType == "COLUMN" {
 		compareColumns(conn1, conn2)
+	} else if schemaType == "FUNCTION" {
+		compareFunctions(conn1, conn2)
+	} else if schemaType == "VIEW" {
+		compareViews(conn1, conn2)
 	} else if schemaType == "INDEX" {
 		compareIndexes(conn1, conn2)
 	} else if schemaType == "FOREIGN_KEY" {
@@ -90,6 +121,8 @@ func main() {
 		compareGrantRelationships(conn1, conn2)
 	} else if schemaType == "GRANT_ATTRIBUTE" {
 		compareGrantAttributes(conn1, conn2)
+	} else if schemaType == "TRIGGER" {
+		compareTriggers(conn1, conn2)
 	} else {
 		fmt.Println("Not yet handled:", schemaType)
 	}
@@ -135,24 +168,26 @@ func doDiff(db1 Schema, db2 Schema) {
 }
 
 func usage() {
-	fmt.Fprintf(os.Stderr, "usage: %s [database flags] <schemaType> \n", os.Args[0])
+	fmt.Fprintf(os.Stderr, "%s - version %s\n", os.Args[0], version)
+	fmt.Fprintf(os.Stderr, "usage: %s [<options>] <schemaType> \n", os.Args[0])
 	fmt.Fprintln(os.Stderr, `
 Compares the schema between two PostgreSQL databases and generates alter statements 
-to be *manually* run against the second database.
+that can be *manually* run against the second database.
 
-[database flags]: (optional)
-  -U1     : postgres user (matches psql flag)
-  -h1     : database host -- default is localhost (matches psql flag)
-  -p1     : port.  defaults to 5432 (matches psql flag)
-  -d1     : database name (matches psql flag)
-  -pw1    : password for the postgres user (otherwise you'll be prompted)
-  -U2     : postgres user (matches psql flag)
-  -h2     : database host -- default is localhost (matches psql flag)
-  -p2     : port.  defaults to 5432 (matches psql flag)
-  -d2     : database name (matches psql flag)
-  -pw2    : password for the postgres user (otherwise you'll be prompted)
+Options:
+  -?, --help    : print help information
+  -V, --version : print version information
+  -v, --verbose : print extra run information
+  -U, --user1   : first postgres user 
+  -u, --user2   : second postgres user 
+  -H, --host1   : first database host. default is localhost 
+  -h, --host2   : second database host. default is localhost 
+  -P, --port1   : first port. default is 5432 
+  -p, --port2   : second port. default is 5432 
+  -D, --dbname1 : first database name 
+  -d, --dbname2 : second database name 
 
-<schemaTpe> : type of schema to check: TABLE, COLUMN, FOREIGN_KEY (soon: CONSTRAINT, ROLE)
+<schemaTpe> can be: ROLE, SEQUENCE, TABLE, VIEW, COLUMN, INDEX, FOREIGN_KEY, OWNER, GRANT_RELATIONSHIP, GRANT_ATTRIBUTE
 `)
 
 	os.Exit(2)
@@ -161,15 +196,5 @@ to be *manually* run against the second database.
 func check(msg string, err error) {
 	if err != nil {
 		log.Fatal("Error "+msg, err)
-	}
-}
-
-func _compareString(s1 string, s2 string) int {
-	if s1 == s2 {
-		return 0
-	} else if s1 < s2 {
-		return -1
-	} else {
-		return +1
 	}
 }

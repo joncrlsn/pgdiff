@@ -11,6 +11,7 @@ import "fmt"
 import "strings"
 import "database/sql"
 import "github.com/joncrlsn/pgutil"
+import "github.com/joncrlsn/misc"
 
 // ==================================
 // IndexRows definition
@@ -86,14 +87,14 @@ func (c *IndexSchema) Compare(obj interface{}) int {
 		fmt.Printf("--Comparing (table_name or index_name is empty): %v\n--           %v\n", c.getRow(), c2.getRow())
 	}
 
-	val := _compareString(c.get("table_name"), c2.get("table_name"))
+	val := misc.CompareStrings(c.get("table_name"), c2.get("table_name"))
 	if val != 0 {
 		// Table name differed so return that value
 		return val
 	}
 
 	// Table name was the same so compare index name
-	val = _compareString(c.get("index_name"), c2.get("index_name"))
+	val = misc.CompareStrings(c.get("index_name"), c2.get("index_name"))
 	return val
 }
 
@@ -226,9 +227,9 @@ JOIN pg_catalog.pg_class AS c ON (c.oid = i.indrelid)
 JOIN pg_catalog.pg_class AS c2 ON (c2.oid = i.indexrelid)
 LEFT JOIN pg_catalog.pg_constraint con
     ON (con.conrelid = i.indrelid AND con.conindid = i.indexrelid AND con.contype IN ('p','u','x'))
+JOIN pg_catalog.pg_namespace AS n ON (c2.relnamespace = n.oid)
 WHERE c.relname NOT LIKE 'pg_%'
---AND c.relname = 't_org'
---ORDER BY c.relname, c2.relname;
+AND n.nspname = 'public';
 `
 	rowChan1, _ := pgutil.QueryStrings(conn1, sql)
 	rowChan2, _ := pgutil.QueryStrings(conn2, sql)
