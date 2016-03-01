@@ -1,16 +1,22 @@
 //
 // Copyright (c) 2014 Jon Carlson.  All rights reserved.
-// Use of this source code is governed by an MIT-style
+// Use of this source code is governed by the MIT
 // license that can be found in the LICENSE file.
 //
 
 package main
 
-import "fmt"
-import "database/sql"
-import "sort"
-import "github.com/joncrlsn/pgutil"
-import "github.com/joncrlsn/misc"
+import (
+	"database/sql"
+	"fmt"
+	"github.com/joncrlsn/misc"
+	"github.com/joncrlsn/pgutil"
+	"regexp"
+	"sort"
+	"strings"
+)
+
+var curlyBracketRegex = regexp.MustCompile("[{}]")
 
 // RoleRows is a sortable slice of string maps
 type RoleRows []map[string]string
@@ -219,6 +225,7 @@ func (c RoleSchema) Change(obj interface{}) {
 			options += " CONNECTION LIMIT " + c.get("rolconnlimit")
 		}
 	}
+
 	if c.get("rolvaliduntil") != c2.get("rolvaliduntil") {
 		if c.get("rolvaliduntil") != "null" {
 			options += fmt.Sprintf(" VALID UNTIL '%s'", c.get("rolvaliduntil"))
@@ -228,6 +235,32 @@ func (c RoleSchema) Change(obj interface{}) {
 	// Only alter if we have changes
 	if len(options) > 0 {
 		fmt.Printf("ALTER ROLE %s%s;\n", c.get("rolname"), options)
+	}
+
+	if c.get("memberof") != c2.get("memberof") {
+		fmt.Println(c.get("memberof"), "!=", c2.get("memberof"))
+
+		// Remove the curly brackets
+		memberof1 := curlyBracketRegex.ReplaceAllString(c.get("memberof"), "")
+		memberof2 := curlyBracketRegex.ReplaceAllString(c2.get("memberof"), "")
+
+		// Split
+		membersof1 := strings.Split(memberof1, ",")
+		membersof2 := strings.Split(memberof2, ",")
+
+		// TODO: Define INHERIT or not
+		for _, mo1 := range membersof1 {
+			if !misc.ContainsString(membersof2, mo1) {
+				fmt.Printf("GRANT %s TO %s;\n", mo1, c.get("rolename"))
+			}
+		}
+
+		for _, mo2 := range membersof2 {
+			if !misc.ContainsString(membersof1, mo2) {
+				fmt.Printf("REVOKE %s FROM %s;\n", mo2, c.get("rolename"))
+			}
+		}
+
 	}
 }
 
@@ -245,6 +278,10 @@ SELECT r.rolname
     , r.rolconnlimit
     , r.rolvaliduntil
     , r.rolreplication
+	, ARRAY(SELECT b.rolname 
+	        FROM pg_catalog.pg_auth_members m  
+			JOIN pg_catalog.pg_roles b ON (m.roleid = b.oid)  
+	        WHERE m.member = r.oid) as memberof
 FROM pg_catalog.pg_roles AS r
 ORDER BY r.rolname;
 `

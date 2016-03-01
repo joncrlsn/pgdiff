@@ -83,20 +83,12 @@ func (c *OwnerSchema) Compare(obj interface{}) int {
 
 // Add generates SQL to add the table/view owner
 func (c OwnerSchema) Add() {
-	if c.get("type") == "TABLE" || c.get("type") == "SEQUENCE" {
-		fmt.Printf("-- Notice, db2 has no %s. You probably need to run pgdiff with the %s option first.\n", c.get("relationship_name"), c.get("type"))
-	} else if c.get("type") == "VIEW" {
-		fmt.Printf("-- Notice, db2 has no view named %s. pgdiff does not yet compare view definitions.\n", c.get("relationship_name"))
-	}
+	fmt.Printf("-- Notice, db2 has no %s named %s. You probably need to run pgdiff with the %s option first.\n", c.get("type"), c.get("relationship_name"), c.get("type"))
 }
 
 // Drop generates SQL to drop the role
 func (c OwnerSchema) Drop() {
-	if c.get("type") == "TABLE" || c.get("type") == "SEQUENCE" {
-		fmt.Printf("-- Notice, db2 has a %s that db1 does not: %s. \n", c.get("type"), c.get("relationship_name"))
-	} else if c.get("type") == "VIEW" {
-		fmt.Printf("-- Notice, db2 has a view that db1 does not: %s. pgdiff does not yet compare view definitions.\n", c.get("relationship_name"))
-	}
+	fmt.Printf("-- Notice, db2 has a %s that db1 does not: %s. Cannot compare owners.\n", c.get("type"), c.get("relationship_name"))
 }
 
 // Change handles the case where the role name matches, but the details do not
