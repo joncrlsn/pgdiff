@@ -8,14 +8,14 @@
 # pgdiff -U postgres -W supersecret -D maindb -O sslmode=disable -u postgres -w supersecret -d stagingdb -o sslmode=disable COLUMN
 #
 
-[[ -z $USER1 ]] && USER1=c42
+[[ -z $USER1 ]] && USER1=admin
 [[ -z $HOST1 ]] && HOST1=localhost
-[[ -z $NAME1 ]] && NAME1=cp
+[[ -z $NAME1 ]] && NAME1=prd-db
 [[ -z $OPT1 ]]  && OPT1='sslmode=disable'
 
-[[ -z $USER2 ]] && USER2=c42
+[[ -z $USER2 ]] && USER2=admin
 [[ -z $HOST2 ]] && HOST2=localhost
-[[ -z $NAME2 ]] && NAME2=cp-pentest
+[[ -z $NAME2 ]] && NAME2=qa-db
 [[ -z $OPT2 ]]  && OPT2='sslmode=disable'
 
 echo "This is the reference database:"
