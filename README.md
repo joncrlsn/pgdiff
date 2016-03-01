@@ -63,7 +63,9 @@ options           | explanation
 
 
 ### getting started on linux and osx
+
 linux and osx binaries are packaged with an extra, optional bash script and pgrun program that helps speed the diffing process. 
+
 1. download the tgz file for your OS
 1. untar it:  ```tar -xzvf pgdiff.tgz```
 1. cd to the new pgdiff directory
@@ -73,6 +75,7 @@ linux and osx binaries are packaged with an extra, optional bash script and pgru
 
 
 ### getting started on windows
+
 1. download pgdiff.exe from the bin-win directory on github
 1. edit the db connection defaults in pgdiff.sh or...
 1. manually run pgdiff for each schema type listed in the usage section above
