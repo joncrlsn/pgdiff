@@ -16,7 +16,7 @@ pgdiff is written to be easy to expand and improve the accuracy of the diff.
 
 (where options and &lt;schemaType&gt; are listed below)
 
-I've found that there is an ideal order for running the different schema types.  This order should minimize the problems you encounter.  For example, you'll always want to add new tables before you add new columns.  This is the order that has worked for me, however "your mileage may vary".
+I have found that there is an ideal order for running the different schema types.  This order should minimize the problems you encounter.  For example, you will always want to add new tables before you add new columns.  This is the order that has worked for me, however "your mileage may vary".
 
 Schema type ordering:
 
@@ -35,11 +35,11 @@ Schema type ordering:
 
 
 ### example
-I have found it helpful to take ```--schema-only``` dumps of the databases in question, load them into a local postgres, then do my sql generation and testing there before running the SQL against a more official database. Your local postgres instance will need the correct users/roles populated because db dumps don't copy that information.
+I have found it helpful to take ```--schema-only``` dumps of the databases in question, load them into a local postgres, then do my sql generation and testing there before running the SQL against a more official database. Your local postgres instance will need the correct users/roles populated because db dumps do not copy that information.
 
 ```
-pgdiff -U dbuser -H localhost -D refDB  -O 'sslmode=disable' \
-       -u dbuser -h localhost -d compDB -o 'sslmode=disable' \
+pgdiff -U dbuser -H localhost -D refDB  -O "sslmode=disable" \
+       -u dbuser -h localhost -d compDB -o "sslmode=disable" \
        TABLE 
 ```
 
@@ -87,6 +87,7 @@ linux and osx binaries are packaged with an extra, optional bash script and pgru
 ### version history
 1. 0.9.0 - Implemented ROLE, SEQUENCE, TABLE, COLUMN, INDEX, FOREIGN\_KEY, OWNER, GRANT\_RELATIONSHIP, GRANT\_ATTRIBUTE
 1. 0.9.1 - Added VIEW, FUNCTION, and TRIGGER (Thank you, Shawn Carroll AKA SparkeyG)
+1. 0.9.2 - Fixed bug when using the non-default port
 
 
 ### todo
