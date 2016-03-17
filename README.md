@@ -8,7 +8,7 @@ pgdiff is written to be easy to expand and improve the accuracy of the diff.
 
 
 ### download
-[osx](https://github.com/joncrlsn/pgdiff/raw/master/bin-osx/pgdiff "OSX version") &nbsp; [linux](https://github.com/joncrlsn/pgdiff/raw/master/bin-linux/pgdiff "Linux version") &nbsp; [windows](https://github.com/joncrlsn/pgdiff/raw/master/bin-win/pgdiff.exe "Windows version")
+[osx](https://github.com/joncrlsn/pgdiff/raw/master/bin-osx/pgdiff.tgz "OSX version") &nbsp; [linux](https://github.com/joncrlsn/pgdiff/raw/master/bin-linux/pgdiff.tgz "Linux version") &nbsp; [windows](https://github.com/joncrlsn/pgdiff/raw/master/bin-win/pgdiff.exe "Windows version")
 
 
 ### usage
