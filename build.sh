@@ -12,7 +12,7 @@ SCRIPT_DIR="$(dirname `ls -l $0 | awk '{ print $NF }'`)"
 
 if [[ -d bin-linux ]]; then
     echo "  ==== Building Linux ===="
-    tempdir="$(mktemp -d -t $APPNAME)"
+    tempdir="$(mktemp -d)"
     workdir="$tempdir/$APPNAME"
     echo $workdir
     mkdir -p $workdir
@@ -35,7 +35,7 @@ fi
 
 if [[ -d bin-osx ]]; then
     echo "  ==== Building OSX ===="
-    tempdir="$(mktemp -d -t $APPNAME)"
+    tempdir="$(mktemp -d)"
     workdir="$tempdir/$APPNAME"
     echo $workdir
     mkdir -p $workdir
