@@ -84,7 +84,7 @@ func (c TriggerSchema) Add() {
 
 // Drop returns SQL to drop the trigger
 func (c TriggerSchema) Drop() {
-	fmt.Printf("DROP TRIGGER %s ON ;\n", c.get("trigger_name"), c.get("table_name"))
+	fmt.Printf("DROP TRIGGER %s ON %s;\n", c.get("trigger_name"), c.get("table_name"))
 }
 
 // Change handles the case where the trigger names match, but the definition does not
