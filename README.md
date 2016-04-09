@@ -18,8 +18,9 @@ pgdiff is written to be easy to expand and improve the accuracy of the diff.
 
 I have found that there is an ideal order for running the different schema types.  This order should minimize the problems you encounter.  For example, you will always want to add new tables before you add new columns.  This is the order that has worked for me, however "your mileage may vary".
 
+In addition, some types can have dependencies which are not in the right order.  A classic case is views which depend on other views.  The missing view SQL is generated in alphabetical order so if a view create fails due to a missing view, just run the views SQL file over again. The pgdiff.sh script will prompt you about running it again.
+ 
 Schema type ordering:
-
 1. FUNCTION
 1. ROLE
 1. SEQUENCE
@@ -73,7 +74,7 @@ linux and osx binaries are packaged with an extra, optional bash script and pgru
 1. cd to the new pgdiff directory
 1. edit the db connection defaults in pgdiff.sh 
 1. ...or manually run pgdiff for each schema type listed in the usage section above
-1. review the SQL output for each schema type and, if you want to make them match, run it against db2 
+1. review the SQL output for each schema type and, if you want to make them match, run it against db2 (Function SQL requires the use of pgrun instead of psql)
 
 
 ### getting started on windows
@@ -92,6 +93,6 @@ linux and osx binaries are packaged with an extra, optional bash script and pgru
 
 ### todo
 1. fix SQL for adding an array column
-1. add windows version of pgdiff.sh (or even better: re-write it in Go)
+1. create windows version of pgdiff.sh (or even better: re-write it all in Go)
 1. allow editing of individual SQL lines after failure (this would probably be done in the script pgdiff.sh)
 1. store failed SQL statements in an error file for later fixing and rerunning?
