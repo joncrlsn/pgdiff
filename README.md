@@ -21,6 +21,7 @@ I have found that there is an ideal order for running the different schema types
 In addition, some types can have dependencies which are not in the right order.  A classic case is views which depend on other views.  The missing view SQL is generated in alphabetical order so if a view create fails due to a missing view, just run the views SQL file over again. The pgdiff.sh script will prompt you about running it again.
  
 Schema type ordering:
+
 1. FUNCTION
 1. ROLE
 1. SEQUENCE
