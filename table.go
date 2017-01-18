@@ -94,11 +94,12 @@ func (c TableSchema) Change(obj interface{}) {
 // compareTables outputs SQL to make the table names match between DBs
 func compareTables(conn1 *sql.DB, conn2 *sql.DB) {
 	sql := `
-SELECT table_name
+SELECT table_schema || '.' || table_name AS table_name
     , CASE table_type WHEN 'BASE TABLE' THEN 'TABLE' ELSE table_type END AS table_type
     , is_insertable_into
 FROM information_schema.tables 
-WHERE table_schema = 'public' 
+WHERE table_schema NOT LIKE 'pg_%' 
+WHERE table_schema <> 'information_schema' 
 AND table_type = 'BASE TABLE'
 ORDER BY table_name;`
 

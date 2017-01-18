@@ -66,18 +66,20 @@ function rundiff() {
     echo
 }
 
-rundiff FUNCTION
 rundiff ROLE
+rundiff FUNCTION
+rundiff SCHEMA
 rundiff SEQUENCE
 rundiff TABLE
 rundiff COLUMN
+rundiff INDEX
 rundiff VIEW
 rundiff OWNER
-rundiff INDEX
 rundiff FOREIGN_KEY
 rundiff GRANT_RELATIONSHIP
 rundiff GRANT_ATTRIBUTE
 rundiff TRIGGER
 
+echo
 echo "Done!"
 

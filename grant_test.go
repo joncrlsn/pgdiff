@@ -70,6 +70,6 @@ func doParseAcls(t *testing.T, acl string, expectedRole string, expectedPermCoun
 		t.Error("Wrong role parsed: " + role + " instead of " + expectedRole)
 	}
 	if len(perms) != expectedPermCount {
-		t.Error("Incorrect number of permissions parsed: " + len(perms) + " instead of " + expectedPermCount)
+		t.Error("Incorrect number of permissions parsed: %d instead of %d", len(perms), expectedPermCount)
 	}
 }

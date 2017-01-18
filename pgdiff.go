@@ -1,5 +1,5 @@
 //
-// Copyright (c) 2016 Jon Carlson.  All rights reserved.
+// Copyright (c) 2017 Jon Carlson.  All rights reserved.
 // Use of this source code is governed by the MIT
 // license that can be found in the LICENSE file.
 //
@@ -88,17 +88,20 @@ func main() {
 	// proper order.
 	if schemaType == "ALL" {
 		compareRoles(conn1, conn2)
+		compareFunctions(conn1, conn2)
+		compareSchematas(conn1, conn2)
 		compareSequences(conn1, conn2)
 		compareTables(conn1, conn2)
 		compareColumns(conn1, conn2)
 		compareIndexes(conn1, conn2) // includes PK and Unique constraints
 		compareViews(conn1, conn2)
-		compareFunctions(conn1, conn2)
-		compareForeignKeys(conn1, conn2)
 		compareOwners(conn1, conn2)
+		compareForeignKeys(conn1, conn2)
 		compareGrantRelationships(conn1, conn2)
 		compareGrantAttributes(conn1, conn2)
 		compareTriggers(conn1, conn2)
+	} else if schemaType == "SCHEMA" {
+		compareSchematas(conn1, conn2)
 	} else if schemaType == "ROLE" {
 		compareRoles(conn1, conn2)
 	} else if schemaType == "SEQUENCE" {

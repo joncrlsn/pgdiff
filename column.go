@@ -184,14 +184,14 @@ func (c *ColumnSchema) Change(obj interface{}) {
  */
 func compareColumns(conn1 *sql.DB, conn2 *sql.DB) {
 	sql := `
-SELECT table_name
+SELECT schema_name || '.' || table_name AS table_name
     , column_name
     , data_type
     , is_nullable
     , column_default
     , character_maximum_length
 FROM information_schema.columns 
-WHERE table_schema = 'public'
+WHERE table_schema NOT LIKE 'pg_%'
 AND is_updatable = 'YES'
 ORDER BY table_name, column_name;`
 
@@ -224,6 +224,7 @@ ORDER BY table_name, column_name;`
 func getMaxLength(maxLength string) (string, bool) {
 
 	if maxLength == "null" {
+		// default to 1024
 		return "1024", false
 	}
 	return maxLength, true
