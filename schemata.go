@@ -95,7 +95,7 @@ func (c SchemataSchema) Change(obj interface{}) {
 	// There's nothing we need to do here
 }
 
-// compareSchemas outputs SQL to make the schema names match between DBs
+// compareSchematas outputs SQL to make the schema names match between DBs
 func compareSchematas(conn1 *sql.DB, conn2 *sql.DB) {
 	sql := `
 SELECT schema_name

@@ -22,14 +22,16 @@ In addition, some types can have dependencies which are not in the right order. 
  
 Schema type ordering:
 
-1. FUNCTION
 1. ROLE
+1. FUNCTION
+1. SEQUENCE
+1. SCHEMA
 1. SEQUENCE
 1. TABLE
 1. COLUMN
+1. INDEX
 1. VIEW
 1. OWNER
-1. INDEX
 1. FOREIGN\_KEY
 1. GRANT\_RELATIONSHIP
 1. GRANT\_ATTRIBUTE

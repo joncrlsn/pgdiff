@@ -7,7 +7,10 @@
 #
 # If you convert this to a windows batch file (or, even better, a Go program), please share it.
 #
-# Example:
+# Example script usage:
+# USER1=db-user HOST1=db-server NAME1=db1 USER2=db-user HOST2=db-server NAME2=db2 pgdiff.sh
+#
+# Example without this script:
 # pgdiff -U postgres -W supersecret -H dbhost1 -P 5432 -D maindb    -O 'sslmode=disable' \
 #        -u postgres -w supersecret -h dbhost2 -p 5432 -d stagingdb -o 'sslmode=disable' \
 #        COLUMN
