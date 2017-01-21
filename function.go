@@ -104,14 +104,14 @@ func (c FunctionSchema) Change(obj interface{}) {
 // compareFunctions outputs SQL to make the functions match between DBs
 func compareFunctions(conn1 *sql.DB, conn2 *sql.DB) {
 	sql := `
-    SELECT p.oid::regprocedure      AS function_name
-        , t.typname                 AS return_type
-        , pg_get_functiondef(p.oid) AS definition
+    SELECT n.nspname || '.' || p.oid::regprocedure   AS function_name
+        , t.typname                                  AS return_type
+        , pg_get_functiondef(p.oid)                  AS definition
     FROM pg_proc AS p
-       JOIN pg_type t ON (p.prorettype = t.oid)
-       JOIN pg_namespace n ON (n.oid = p.pronamespace)
-       JOIN pg_language l ON (p.prolang = l.oid AND l.lanname IN ('c','plpgsql', 'sql'))
-    WHERE n.nspname = 'public';
+    JOIN pg_type t ON (p.prorettype = t.oid)
+    JOIN pg_namespace n ON (n.oid = p.pronamespace)
+    JOIN pg_language l ON (p.prolang = l.oid AND l.lanname IN ('c','plpgsql', 'sql'))
+    WHERE n.nspname NOT LIKE 'pg_%';
 	`
 
 	rowChan1, _ := pgutil.QueryStrings(conn1, sql)

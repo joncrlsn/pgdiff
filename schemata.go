@@ -31,7 +31,7 @@ func (slice SchemataRows) Swap(i, j int) {
 	slice[i], slice[j] = slice[j], slice[i]
 }
 
-// SchemataSchema holds a channel streaming table information from one of the databases as well as
+// SchemataSchema holds a channel streaming schema meta information from one of the databases as well as
 // a reference to the current row of data we're viewing.
 //
 // SchemataSchema implements the Schema interface defined in pgdiff.go
@@ -86,7 +86,7 @@ func (c SchemataSchema) Drop() {
 	fmt.Printf("DROP SCHEMA IF EXISTS %s;\n", c.get("schema_name"))
 }
 
-// Change handles the case where the table and column match, but the details do not
+// Change handles the case where the schema name matches, but the details do not
 func (c SchemataSchema) Change(obj interface{}) {
 	c2, ok := obj.(*SchemataSchema)
 	if !ok {
@@ -102,8 +102,8 @@ SELECT schema_name
     , schema_owner
     , default_character_set_schema
 FROM information_schema.schemata
-WHERE table_schema NOT LIKE 'pg_%' 
-WHERE table_schema <> 'information_schema' 
+WHERE schema_name NOT LIKE 'pg_%' 
+  AND schema_name <> 'information_schema' 
 ORDER BY schema_name;`
 
 	rowChan1, _ := pgutil.QueryStrings(conn1, sql)

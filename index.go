@@ -215,7 +215,7 @@ func compareIndexes(conn1 *sql.DB, conn2 *sql.DB) {
 	// This SQL was generated with psql -E -c "\d t_org"
 	// The "magic" is in pg_get_indexdef and pg_get_constraint
 	sql := `
-SELECT c.relname AS table_name
+SELECT n.nspname || '.' || c.relname AS table_name -- schema.table
     , c2.relname AS index_name
     , i.indisprimary AS pk
     , i.indisunique AS uq
@@ -223,13 +223,13 @@ SELECT c.relname AS table_name
     , pg_catalog.pg_get_constraintdef(con.oid, true) AS constraint_def
     , con.contype AS typ
 FROM pg_catalog.pg_index AS i
-JOIN pg_catalog.pg_class AS c ON (c.oid = i.indrelid)
-JOIN pg_catalog.pg_class AS c2 ON (c2.oid = i.indexrelid)
+INNER JOIN pg_catalog.pg_class AS c ON (c.oid = i.indrelid)
+INNER JOIN pg_catalog.pg_class AS c2 ON (c2.oid = i.indexrelid)
 LEFT JOIN pg_catalog.pg_constraint con
     ON (con.conrelid = i.indrelid AND con.conindid = i.indexrelid AND con.contype IN ('p','u','x'))
-JOIN pg_catalog.pg_namespace AS n ON (c2.relnamespace = n.oid)
+INNER JOIN pg_catalog.pg_namespace AS n ON (c2.relnamespace = n.oid)
 WHERE c.relname NOT LIKE 'pg_%'
-AND n.nspname = 'public';
+AND n.nspname NOT LIKE 'pg_%';
 `
 	rowChan1, _ := pgutil.QueryStrings(conn1, sql)
 	rowChan2, _ := pgutil.QueryStrings(conn2, sql)

@@ -183,7 +183,7 @@ SELECT
 FROM pg_catalog.pg_class c
 LEFT JOIN pg_catalog.pg_namespace n ON (n.oid = c.relnamespace)
 WHERE c.relkind IN ('r', 'v', 'S', 'f')
-  AND n.nspname !~ '^pg_' 
+  AND n.nspname NOT LIKE 'pg_%' 
   AND pg_catalog.pg_table_is_visible(c.oid)
 ORDER BY n.nspname, c.relname;
 `

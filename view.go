@@ -96,10 +96,10 @@ func (c ViewSchema) Change(obj interface{}) {
 // compareViews outputs SQL to make the views match between DBs
 func compareViews(conn1 *sql.DB, conn2 *sql.DB) {
 	sql := `
-	SELECT viewname
+	SELECT schemaname || '.' || viewname AS viewname
 		, definition 
 	FROM pg_views 
-	WHERE schemaname = 'public' 
+	WHERE schemaname NOT LIKE 'pg_%' 
 	ORDER BY viewname;
 	`
 

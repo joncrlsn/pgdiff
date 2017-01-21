@@ -1,5 +1,5 @@
 //
-// Copyright (c) 2014 Jon Carlson.  All rights reserved.
+// Copyright (c) 2017 Jon Carlson.  All rights reserved.
 // Use of this source code is governed by an MIT-style
 // license that can be found in the LICENSE file.
 //
@@ -93,11 +93,15 @@ func (c SequenceSchema) Change(obj interface{}) {
 // compareSequences outputs SQL to make the sequences match between DBs
 func compareSequences(conn1 *sql.DB, conn2 *sql.DB) {
 	sql := `
-SELECT sequence_name, data_type, start_value
-	, minimum_value, maximum_value
-	, increment, cycle_option 
+SELECT sequence_schema || '.' || sequence_name
+	, data_type
+	, start_value
+	, minimum_value
+	, maximum_value
+	, increment
+	, cycle_option 
 FROM information_schema.sequences
-WHERE sequence_schema = 'public'
+WHERE sequence_schema NOT LIKE 'pg_%'
 ORDER BY sequence_name;`
 
 	rowChan1, _ := pgutil.QueryStrings(conn1, sql)

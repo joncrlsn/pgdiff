@@ -105,15 +105,15 @@ func (c TriggerSchema) Change(obj interface{}) {
 // compareTriggers outputs SQL to make the triggers match between DBs
 func compareTriggers(conn1 *sql.DB, conn2 *sql.DB) {
 	sql := `
-    SELECT tbl.relname AS table_name
+    SELECT tbl.nspname || '.' || tbl.relname AS table_name
     	, t.tgname AS trigger_name
     	, pg_catalog.pg_get_triggerdef(t.oid, true) AS definition
     	, t.tgenabled AS enabled
     FROM pg_catalog.pg_trigger t
     INNER JOIN (
-    	SELECT c.oid, c.relname
+    	SELECT c.oid, n.nspname, c.relname
     	FROM pg_catalog.pg_class c
-    	JOIN pg_catalog.pg_namespace n ON (n.oid = c.relnamespace AND n.nspname = 'public')
+    	JOIN pg_catalog.pg_namespace n ON (n.oid = c.relnamespace AND n.nspname NOT LIKE 'pg_%')
     	WHERE pg_catalog.pg_table_is_visible(c.oid)) AS tbl
     	ON (tbl.oid = t.tgrelid)
     AND NOT t.tgisinternal
