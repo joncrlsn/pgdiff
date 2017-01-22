@@ -1,4 +1,4 @@
-#!/bin/bash -x
+#!/bin/bash
 #
 # For OSX and Linux, this script:
 #  * builds pgdiff 

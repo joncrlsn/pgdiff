@@ -92,6 +92,8 @@ linux and osx binaries are packaged with an extra, optional bash script and pgru
 1. 0.9.0 - Implemented ROLE, SEQUENCE, TABLE, COLUMN, INDEX, FOREIGN\_KEY, OWNER, GRANT\_RELATIONSHIP, GRANT\_ATTRIBUTE
 1. 0.9.1 - Added VIEW, FUNCTION, and TRIGGER (Thank you, Shawn Carroll AKA SparkeyG)
 1. 0.9.2 - Fixed bug when using the non-default port
+1. 0.9.3 - Added support for schemas other than public. Fixed VARCHAR bug when no max length
+   specified
 
 
 ### todo
