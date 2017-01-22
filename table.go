@@ -1,5 +1,5 @@
 //
-// Copyright (c) 2014 Jon Carlson.  All rights reserved.
+// Copyright (c) 2017 Jon Carlson.  All rights reserved.
 // Use of this source code is governed by an MIT-style
 // license that can be found in the LICENSE file.
 //
@@ -99,8 +99,8 @@ SELECT table_schema || '.' || table_name AS table_name
     , is_insertable_into
 FROM information_schema.tables 
 WHERE table_schema NOT LIKE 'pg_%' 
-WHERE table_schema <> 'information_schema' 
-AND table_type = 'BASE TABLE'
+  AND table_schema <> 'information_schema' 
+  AND table_type = 'BASE TABLE'
 ORDER BY table_name;`
 
 	rowChan1, _ := pgutil.QueryStrings(conn1, sql)

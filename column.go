@@ -1,5 +1,5 @@
 //
-// Copyright (c) 2014 Jon Carlson.  All rights reserved.
+// Copyright (c) 2017 Jon Carlson.  All rights reserved.
 // Use of this source code is governed by an MIT-style
 // license that can be found in the LICENSE file.
 //
@@ -89,9 +89,10 @@ func (c *ColumnSchema) Add() {
 	if c.get("data_type") == "character varying" {
 		maxLength, valid := getMaxLength(c.get("character_maximum_length"))
 		if !valid {
-			fmt.Println("-- WARNING: varchar column has no maximum length.  Setting to 1024, which could result in data loss")
+		    fmt.Printf("ALTER TABLE %s ADD COLUMN %s character varying", c.get("table_name"), c.get("column_name"))
+		} else {
+			fmt.Printf("ALTER TABLE %s ADD COLUMN %s character varying(%s)", c.get("table_name"), c.get("column_name"), maxLength)
 		}
-		fmt.Printf("ALTER TABLE %s ADD COLUMN %s %s(%s)", c.get("table_name"), c.get("column_name"), c.get("data_type"), maxLength)
 	} else {
 		if c.get("data_type") == "ARRAY" {
 			fmt.Println("-- Note that adding of array data types are not yet generated properly.")
@@ -121,12 +122,15 @@ func (c *ColumnSchema) Change(obj interface{}) {
 		fmt.Println("Error!!!, ColumnSchema.Change(obj) needs a ColumnSchema instance", c2)
 	}
 
-	// Detect column type change (mostly varchar length, or number size increase)  (integer to/from bigint is OK)
+	// Detect column type change (mostly varchar length, or number size increase) 
+	// (integer to/from bigint is OK)
 	if c.get("data_type") == c2.get("data_type") {
 		if c.get("data_type") == "character varying" {
 			max1, max1Valid := getMaxLength(c.get("character_maximum_length"))
 			max2, max2Valid := getMaxLength(c2.get("character_maximum_length"))
-			if (max1Valid || !max2Valid) && (max1 != c2.get("character_maximum_length")) {
+			if !max1Valid && !max2Valid {
+				// Leave them alone, they both have undefined max lengths
+			} else if (max1Valid || !max2Valid) && (max1 != c2.get("character_maximum_length")) {
 				//if !max1Valid {
 				//    fmt.Println("-- WARNING: varchar column has no maximum length.  Setting to 1024, which may result in data loss.")
 				//}
@@ -137,6 +141,7 @@ func (c *ColumnSchema) Change(obj interface{}) {
 				if max1Int < max2Int {
 					fmt.Println("-- WARNING: The next statement will shorten a character varying column, which may result in data loss.")
 				}
+				fmt.Printf("-- max1Valid: %v  max2Valid: %v ", max1Valid, max2Valid)
 				fmt.Printf("ALTER TABLE %s ALTER COLUMN %s TYPE character varying(%s);\n", c.get("table_name"), c.get("column_name"), max1)
 			}
 		}
@@ -184,7 +189,7 @@ func (c *ColumnSchema) Change(obj interface{}) {
  */
 func compareColumns(conn1 *sql.DB, conn2 *sql.DB) {
 	sql := `
-SELECT schema_name || '.' || table_name AS table_name
+SELECT table_schema || '.' || table_name AS table_name
     , column_name
     , data_type
     , is_nullable
@@ -192,7 +197,8 @@ SELECT schema_name || '.' || table_name AS table_name
     , character_maximum_length
 FROM information_schema.columns 
 WHERE table_schema NOT LIKE 'pg_%'
-AND is_updatable = 'YES'
+  AND table_schema <> 'information_schema'
+  AND is_updatable = 'YES'
 ORDER BY table_name, column_name;`
 
 	rowChan1, _ := pgutil.QueryStrings(conn1, sql)

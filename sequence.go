@@ -93,7 +93,7 @@ func (c SequenceSchema) Change(obj interface{}) {
 // compareSequences outputs SQL to make the sequences match between DBs
 func compareSequences(conn1 *sql.DB, conn2 *sql.DB) {
 	sql := `
-SELECT sequence_schema || '.' || sequence_name
+SELECT sequence_schema || '.' || sequence_name AS sequence_name
 	, data_type
 	, start_value
 	, minimum_value
@@ -101,8 +101,8 @@ SELECT sequence_schema || '.' || sequence_name
 	, increment
 	, cycle_option 
 FROM information_schema.sequences
-WHERE sequence_schema NOT LIKE 'pg_%'
-ORDER BY sequence_name;`
+WHERE sequence_schema NOT LIKE 'pg_%';
+`
 
 	rowChan1, _ := pgutil.QueryStrings(conn1, sql)
 	rowChan2, _ := pgutil.QueryStrings(conn2, sql)

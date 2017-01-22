@@ -215,7 +215,7 @@ func compareIndexes(conn1 *sql.DB, conn2 *sql.DB) {
 	// This SQL was generated with psql -E -c "\d t_org"
 	// The "magic" is in pg_get_indexdef and pg_get_constraint
 	sql := `
-SELECT n.nspname || '.' || c.relname AS table_name -- schema.table
+SELECT n.nspname || '.' || c.relname AS table_name
     , c2.relname AS index_name
     , i.indisprimary AS pk
     , i.indisunique AS uq
