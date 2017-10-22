@@ -6,13 +6,48 @@
 
 package main
 
-import "sort"
-import "fmt"
-import "strconv"
-import "strings"
-import "database/sql"
-import "github.com/joncrlsn/pgutil"
-import "github.com/joncrlsn/misc"
+import (
+"sort"
+"fmt"
+"strconv"
+"strings"
+"database/sql"
+"github.com/joncrlsn/pgutil"
+"github.com/joncrlsn/misc"
+"text/template"
+"bytes"
+)
+
+var (
+	columnSqlTemplate = initColumnSqlTemplate()
+)
+
+// Initializes the Sql template
+func initColumnSqlTemplate() *template.Template {
+	sql := `
+SELECT table_schema
+    , {{if eq $.DbSchema "*" }}table_schema || '.' || {{end}}table_name AS compare_name
+	, table_name
+    , column_name
+    , data_type
+    , is_nullable
+    , column_default
+    , character_maximum_length
+FROM information_schema.columns 
+WHERE is_updatable = 'YES'
+{{if eq $.DbSchema "*" }}
+AND table_schema NOT LIKE 'pg_%' 
+AND table_schema <> 'information_schema' 
+{{else}}
+AND table_schema = '{{$.DbSchema}}'
+{{end}}
+ORDER BY compare_name, column_name;
+`
+	t := template.New("ColumnSqlTmpl")
+	template.Must(t.Parse(sql))
+	return t
+}
+
 
 // ==================================
 // Column Rows definition
@@ -26,8 +61,8 @@ func (slice ColumnRows) Len() int {
 }
 
 func (slice ColumnRows) Less(i, j int) bool {
-	if slice[i]["table_name"] != slice[j]["table_name"] {
-		return slice[i]["table_name"] < slice[j]["table_name"]
+	if slice[i]["compare_name"] != slice[j]["compare_name"] {
+		return slice[i]["column_name"] < slice[j]["compare_name"]
 	}
 	return slice[i]["column_name"] < slice[j]["column_name"]
 }
@@ -73,7 +108,7 @@ func (c *ColumnSchema) Compare(obj interface{}) int {
 		fmt.Println("Error!!!, Compare needs a ColumnSchema instance", c2)
 	}
 
-	val := misc.CompareStrings(c.get("table_name"), c2.get("table_name"))
+	val := misc.CompareStrings(c.get("compare_name"), c2.get("compare_name"))
 	if val != 0 {
 		// Table name differed so return that value
 		return val
@@ -85,19 +120,24 @@ func (c *ColumnSchema) Compare(obj interface{}) int {
 }
 
 // Add prints SQL to add the column
-func (c *ColumnSchema) Add() {
+func (c *ColumnSchema) Add(obj interface{}) {
+	c2, ok := obj.(*ColumnSchema)
+	if !ok {
+		fmt.Println("Error!!!, ColumnSchema.Add(obj) needs a ColumnSchema instance", c2)
+	}
+
 	if c.get("data_type") == "character varying" {
 		maxLength, valid := getMaxLength(c.get("character_maximum_length"))
 		if !valid {
-		    fmt.Printf("ALTER TABLE %s ADD COLUMN %s character varying", c.get("table_name"), c.get("column_name"))
+			fmt.Printf("ALTER TABLE %s.%s ADD COLUMN %s character varying", c2.get("table_schema"), c.get("table_name"), c.get("column_name"))
 		} else {
-			fmt.Printf("ALTER TABLE %s ADD COLUMN %s character varying(%s)", c.get("table_name"), c.get("column_name"), maxLength)
+			fmt.Printf("ALTER TABLE %s.%s ADD COLUMN %s character varying(%s)", c2.get("table_schema"), c.get("table_name"), c.get("column_name"), maxLength)
 		}
 	} else {
 		if c.get("data_type") == "ARRAY" {
 			fmt.Println("-- Note that adding of array data types are not yet generated properly.")
 		}
-		fmt.Printf("ALTER TABLE %s ADD COLUMN %s %s", c.get("table_name"), c.get("column_name"), c.get("data_type"))
+		fmt.Printf("ALTER TABLE %s.%s ADD COLUMN %s %s", c2.get("table_schema"), c.get("table_name"), c.get("column_name"), c.get("data_type"))
 	}
 
 	if c.get("is_nullable") == "NO" {
@@ -110,9 +150,13 @@ func (c *ColumnSchema) Add() {
 }
 
 // Drop prints SQL to drop the column
-func (c *ColumnSchema) Drop() {
+func (c *ColumnSchema) Drop(obj interface{}) {
+	c2, ok := obj.(*ColumnSchema)
+	if !ok {
+		fmt.Println("Error!!!, ColumnSchema.Drop(obj) needs a ColumnSchema instance", c2)
+	}
 	// if dropping column
-	fmt.Printf("ALTER TABLE %s DROP COLUMN IF EXISTS %s;\n", c.get("table_name"), c.get("column_name"))
+	fmt.Printf("ALTER TABLE %s.%s DROP COLUMN IF EXISTS %s;\n", c2.get("table_schema"), c2.get("table_name"), c2.get("column_name"))
 }
 
 // Change handles the case where the table and column match, but the details do not
@@ -122,7 +166,7 @@ func (c *ColumnSchema) Change(obj interface{}) {
 		fmt.Println("Error!!!, ColumnSchema.Change(obj) needs a ColumnSchema instance", c2)
 	}
 
-	// Detect column type change (mostly varchar length, or number size increase) 
+	// Detect column type change (mostly varchar length, or number size increase)
 	// (integer to/from bigint is OK)
 	if c.get("data_type") == c2.get("data_type") {
 		if c.get("data_type") == "character varying" {
@@ -141,8 +185,8 @@ func (c *ColumnSchema) Change(obj interface{}) {
 				if max1Int < max2Int {
 					fmt.Println("-- WARNING: The next statement will shorten a character varying column, which may result in data loss.")
 				}
-				fmt.Printf("-- max1Valid: %v  max2Valid: %v ", max1Valid, max2Valid)
-				fmt.Printf("ALTER TABLE %s ALTER COLUMN %s TYPE character varying(%s);\n", c.get("table_name"), c.get("column_name"), max1)
+				fmt.Printf("-- max1Valid: %v  max2Valid: %v \n", max1Valid, max2Valid)
+				fmt.Printf("ALTER TABLE %s.%s ALTER COLUMN %s TYPE character varying(%s);\n", c2.get("table_schema"), c.get("table_name"), c.get("column_name"), max1)
 			}
 		}
 	}
@@ -155,27 +199,27 @@ func (c *ColumnSchema) Change(obj interface{}) {
 			if !max1Valid {
 				fmt.Println("-- WARNING: varchar column has no maximum length.  Setting to 1024")
 			}
-			fmt.Printf("ALTER TABLE %s ALTER COLUMN %s TYPE %s(%s);\n", c.get("table_name"), c.get("column_name"), c.get("data_type"), max1)
+			fmt.Printf("ALTER TABLE %s.%s ALTER COLUMN %s TYPE %s(%s);\n", c2.get("table_schema"), c.get("table_name"), c.get("column_name"), c.get("data_type"), max1)
 		} else {
-			fmt.Printf("ALTER TABLE %s ALTER COLUMN %s TYPE %s;\n", c.get("table_name"), c.get("column_name"), c.get("data_type"))
+			fmt.Printf("ALTER TABLE %s.%s ALTER COLUMN %s TYPE %s;\n", c2.get("table_schema"), c.get("table_name"), c.get("column_name"), c.get("data_type"))
 		}
 	}
 
 	// Detect column default change (or added, dropped)
 	if c.get("column_default") == "null" {
 		if c.get("column_default") != "null" {
-			fmt.Printf("ALTER TABLE %s ALTER COLUMN %s DROP DEFAULT;\n", c.get("table_name"), c.get("column_name"))
+			fmt.Printf("ALTER TABLE %s.%s ALTER COLUMN %s DROP DEFAULT;\n", c2.get("table_schema"), c.get("table_name"), c.get("column_name"))
 		}
 	} else if c.get("column_default") != c2.get("column_default") {
-		fmt.Printf("ALTER TABLE %s ALTER COLUMN %s SET DEFAULT %s;\n", c.get("table_name"), c.get("column_name"), c.get("column_default"))
+		fmt.Printf("ALTER TABLE %s.%s ALTER COLUMN %s SET DEFAULT %s;\n", c2.get("table_schema"), c.get("table_name"), c.get("column_name"), c.get("column_default"))
 	}
 
 	// Detect not-null and nullable change
 	if c.get("is_nullable") != c2.get("is_nullable") {
 		if c.get("is_nullable") == "YES" {
-			fmt.Printf("ALTER TABLE %s ALTER COLUMN %s DROP NOT NULL;\n", c.get("table_name"), c.get("column_name"))
+			fmt.Printf("ALTER TABLE %s.%s ALTER COLUMN %s DROP NOT NULL;\n", c2.get("table_schema"), c.get("table_name"), c.get("column_name"))
 		} else {
-			fmt.Printf("ALTER TABLE %s ALTER COLUMN %s SET NOT NULL;\n", c.get("table_name"), c.get("column_name"))
+			fmt.Printf("ALTER TABLE %s.%s ALTER COLUMN %s SET NOT NULL;\n", c2.get("table_schema"), c.get("table_name"), c.get("column_name"))
 		}
 	}
 }
@@ -188,21 +232,15 @@ func (c *ColumnSchema) Change(obj interface{}) {
  * Compare the columns in the two databases
  */
 func compareColumns(conn1 *sql.DB, conn2 *sql.DB) {
-	sql := `
-SELECT table_schema || '.' || table_name AS table_name
-    , column_name
-    , data_type
-    , is_nullable
-    , column_default
-    , character_maximum_length
-FROM information_schema.columns 
-WHERE table_schema NOT LIKE 'pg_%'
-  AND table_schema <> 'information_schema'
-  AND is_updatable = 'YES'
-ORDER BY table_name, column_name;`
+	
+	buf1 := new(bytes.Buffer)
+	columnSqlTemplate.Execute(buf1, dbInfo1)
 
-	rowChan1, _ := pgutil.QueryStrings(conn1, sql)
-	rowChan2, _ := pgutil.QueryStrings(conn2, sql)
+	buf2 := new(bytes.Buffer)
+	columnSqlTemplate.Execute(buf2, dbInfo2)
+
+	rowChan1, _ := pgutil.QueryStrings(conn1, buf1.String())
+	rowChan2, _ := pgutil.QueryStrings(conn2, buf2.String())
 
 	//rows1 := make([]map[string]string, 500)
 	rows1 := make(ColumnRows, 0)
@@ -217,6 +255,15 @@ ORDER BY table_name, column_name;`
 		rows2 = append(rows2, row)
 	}
 	sort.Sort(&rows2)
+
+    //for _, val := range rows1 {
+		//fmt.Println("list1: ", val["table_schema"], val["compare_name"], val["column_name"], val["character_maximum_length"] )
+	//}
+	//fmt.Println()
+
+    //for _, val := range rows2 {
+		//fmt.Println("list2: ", val["table_schema"], val["compare_name"], val["column_name"], val["character_maximum_length"])
+	//}
 
 	// We have to explicitly type this as Schema here for some unknown reason
 	var schema1 Schema = &ColumnSchema{rows: rows1, rowNum: -1}

@@ -112,13 +112,23 @@ func (c *GrantRelationshipSchema) Compare(obj interface{}) int {
 }
 
 // Add prints SQL to add the column
-func (c *GrantRelationshipSchema) Add() {
+func (c *GrantRelationshipSchema) Add(obj interface{}) {
+	c2, ok := obj.(*GrantRelationshipSchema)
+	if !ok {
+		fmt.Println("-- Error!!!, Add needs a GrantRelationshipSchema instance", c2)
+	}
+
 	role, grants := parseGrants(c.get("relationship_acl"))
 	fmt.Printf("GRANT %s ON %s TO %s; -- Add\n", strings.Join(grants, ", "), c.get("relationship_name"), role)
 }
 
 // Drop prints SQL to drop the column
-func (c *GrantRelationshipSchema) Drop() {
+func (c *GrantRelationshipSchema) Drop(obj interface{}) {
+	c2, ok := obj.(*GrantRelationshipSchema)
+	if !ok {
+		fmt.Println("-- Error!!!, Drop needs a GrantRelationshipSchema instance", c2)
+	}
+
 	role, grants := parseGrants(c.get("relationship_acl"))
 	fmt.Printf("REVOKE %s ON %s FROM %s; -- Drop\n", strings.Join(grants, ", "), c.get("relationship_name"), role)
 }
@@ -127,7 +137,7 @@ func (c *GrantRelationshipSchema) Drop() {
 func (c *GrantRelationshipSchema) Change(obj interface{}) {
 	c2, ok := obj.(*GrantRelationshipSchema)
 	if !ok {
-		fmt.Println("-- Error!!!, change needs a GrantRelationshipSchema instance", c2)
+		fmt.Println("-- Error!!!, Change needs a GrantRelationshipSchema instance", c2)
 	}
 
 	role, grants1 := parseGrants(c.get("relationship_acl"))

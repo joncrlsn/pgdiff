@@ -107,7 +107,12 @@ where option can be:
 */
 
 // Add generates SQL to add the constraint/index
-func (c RoleSchema) Add() {
+func (c RoleSchema) Add(obj interface{}) {
+	c2, ok := obj.(*RoleSchema)
+	if !ok {
+		fmt.Println("Error!!!, Add needs a RoleSchema instance", c2)
+	}
+
 	// We don't care about efficiency here so we just concat strings
 	options := " WITH PASSWORD 'changeme'"
 
@@ -152,7 +157,12 @@ func (c RoleSchema) Add() {
 }
 
 // Drop generates SQL to drop the role
-func (c RoleSchema) Drop() {
+func (c RoleSchema) Drop(obj interface{}) {
+	c2, ok := obj.(*RoleSchema)
+	if !ok {
+		fmt.Println("Error!!!, Drop needs a RoleSchema instance", c2)
+	}
+
 	fmt.Printf("DROP ROLE %s;\n", c.get("rolname"))
 }
 
@@ -160,7 +170,7 @@ func (c RoleSchema) Drop() {
 func (c RoleSchema) Change(obj interface{}) {
 	c2, ok := obj.(*RoleSchema)
 	if !ok {
-		fmt.Println("Error!!!, change needs a RoleSchema instance", c2)
+		fmt.Println("Error!!!, Change needs a RoleSchema instance", c2)
 	}
 
 	options := ""

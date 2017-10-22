@@ -16,19 +16,19 @@ SELECT schema_name
     , schema_owner
     , default_character_set_schema
 FROM information_schema.schemata
-WHERE table_schema NOT LIKE 'pg_%' 
-WHERE table_schema <> 'information_schema' 
+WHERE table_schema NOT LIKE 'pg_%'
+WHERE table_schema <> 'information_schema'
 ORDER BY schema_name;
 */
 
 // Note that these must be sorted by table name for this to work
-var testSchematas1= []map[string]string{
+var testSchematas1 = []map[string]string{
 	{"schema_name": "schema_add", "schema_owner": "noop"},
 	{"schema_name": "schema_same", "schema_owner": "noop"},
 }
 
 // Note that these must be sorted by schema_name for this to work
-var testSchematas2= []map[string]string{
+var testSchematas2 = []map[string]string{
 	{"schema_name": "schema_delete", "schema_owner": "noop"},
 	{"schema_name": "schema_same", "schema_owner": "noop"},
 }

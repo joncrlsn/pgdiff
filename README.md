@@ -58,12 +58,14 @@ options           | explanation
   -u, --user2     | second postgres user
   -W, --password1 | first db password
   -w, --password2 | second db password
-  -H, --host1     | first db host. default is localhost
+  -H, --host1     | first db host.  default is localhost
   -h, --host2     | second db host. default is localhost
-  -P, --port1     | first db port number. default is 5432
+  -P, --port1     | first db port number.  default is 5432
   -p, --port2     | second db port number. default is 5432
   -D, --dbname1   | first db name
   -d, --dbname2   | second db name
+  -S, --schema1   | first schema name.  default is public
+  -s, --schema2   | second schema name. default is public
   -O, --option1   | first db options. example: sslmode=disable
   -o, --option2   | second db options. example: sslmode=disable
 
@@ -92,8 +94,7 @@ linux and osx binaries are packaged with an extra, optional bash script and pgru
 1. 0.9.0 - Implemented ROLE, SEQUENCE, TABLE, COLUMN, INDEX, FOREIGN\_KEY, OWNER, GRANT\_RELATIONSHIP, GRANT\_ATTRIBUTE
 1. 0.9.1 - Added VIEW, FUNCTION, and TRIGGER (Thank you, Shawn Carroll AKA SparkeyG)
 1. 0.9.2 - Fixed bug when using the non-default port
-1. 0.9.3 - Added support for schemas other than public. Fixed VARCHAR bug when no max length
-   specified
+1. 0.9.3 - Added support for schemas other than public. Fixed VARCHAR bug when no max length specified
 
 
 ### todo

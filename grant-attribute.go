@@ -119,13 +119,23 @@ func (c *GrantAttributeSchema) Compare(obj interface{}) int {
 }
 
 // Add prints SQL to add the column
-func (c *GrantAttributeSchema) Add() {
+func (c *GrantAttributeSchema) Add(obj interface{}) {
+	c2, ok := obj.(*GrantAttributeSchema)
+	if !ok {
+		fmt.Println("-- Error!!!, Add needs a GrantAttributeSchema instance", c2)
+	}
+
 	role, grants := parseGrants(c.get("attribute_acl"))
 	fmt.Printf("GRANT %s (%s) ON %s TO %s; -- Add\n", strings.Join(grants, ", "), c.get("attribute_name"), c.get("relationship_name"), role)
 }
 
 // Drop prints SQL to drop the column
-func (c *GrantAttributeSchema) Drop() {
+func (c *GrantAttributeSchema) Drop(obj interface{}) {
+	c2, ok := obj.(*GrantAttributeSchema)
+	if !ok {
+		fmt.Println("-- Error!!!, Drop needs a GrantAttributeSchema instance", c2)
+	}
+
 	role, grants := parseGrants(c.get("attribute_acl"))
 	fmt.Printf("REVOKE %s (%s) ON %s FROM %s; -- Drop\n", strings.Join(grants, ", "), c.get("attribute_name"), c.get("relationship_name"), role)
 }

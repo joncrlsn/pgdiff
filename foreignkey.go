@@ -90,12 +90,20 @@ func (c *ForeignKeySchema) Compare(obj interface{}) int {
 }
 
 // Add returns SQL to add the foreign key
-func (c *ForeignKeySchema) Add() {
+func (c *ForeignKeySchema) Add(obj interface{}) {
+	c2, ok := obj.(*ForeignKeySchema)
+	if !ok {
+		fmt.Println("Error!!!, ForeignKeySchema.Add(obj) needs a ForeignKeySchema instance", c2)
+	}
 	fmt.Printf("ALTER TABLE %s ADD CONSTRAINT %s %s;\n", c.get("table_name"), c.get("fk_name"), c.get("constraint_def"))
 }
 
 // Drop returns SQL to drop the foreign key
-func (c ForeignKeySchema) Drop() {
+func (c ForeignKeySchema) Drop(obj interface{}) {
+	c2, ok := obj.(*ForeignKeySchema)
+	if !ok {
+		fmt.Println("Error!!!, ForeignKeySchema.Drop(obj) needs a ForeignKeySchema instance", c2)
+	}
 	fmt.Printf("ALTER TABLE %s DROP CONSTRAINT %s; -- %s\n", c.get("table_name"), c.get("fk_name"), c.get("constraint_def"))
 }
 
@@ -103,7 +111,7 @@ func (c ForeignKeySchema) Drop() {
 func (c *ForeignKeySchema) Change(obj interface{}) {
 	c2, ok := obj.(*ForeignKeySchema)
 	if !ok {
-		fmt.Println("Error!!!, Change(obj) needs a ForeignKeySchema instance", c2)
+		fmt.Println("Error!!!, ForeignKeySchema.Change(obj) needs a ForeignKeySchema instance", c2)
 	}
 	// There is no "changing" a foreign key.  It either gets created or dropped (or left as-is).
 }

@@ -72,12 +72,22 @@ func (c *ViewSchema) Compare(obj interface{}) int {
 }
 
 // Add returns SQL to create the view
-func (c ViewSchema) Add() {
+func (c ViewSchema) Add(obj interface{}) {
+	c2, ok := obj.(*ViewSchema)
+	if !ok {
+		fmt.Println("Error!!!, Add needs a ViewSchema instance", c2)
+	}
+
 	fmt.Printf("CREATE VIEW %s AS %s \n\n", c.get("viewname"), c.get("definition"))
 }
 
 // Drop returns SQL to drop the view
-func (c ViewSchema) Drop() {
+func (c ViewSchema) Drop(obj interface{}) {
+	c2, ok := obj.(*ViewSchema)
+	if !ok {
+		fmt.Println("Error!!!, Drop needs a ViewSchema instance", c2)
+	}
+
 	fmt.Printf("DROP VIEW IF EXISTS %s;\n\n", c.get("viewname"))
 }
 

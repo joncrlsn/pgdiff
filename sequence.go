@@ -71,13 +71,13 @@ func (c *SequenceSchema) Compare(obj interface{}) int {
 }
 
 // Add returns SQL to add the table
-func (c SequenceSchema) Add() {
+func (c SequenceSchema) Add(obj interface{}) {
 	fmt.Printf("CREATE SEQUENCE %s INCREMENT %s MINVALUE %s MAXVALUE %s START %s;\n", c.get("sequence_name"), c.get("increment"), c.get("minimum_value"), c.get("maximum_value"), c.get("start_value"))
 
 }
 
 // Drop returns SQL to drop the table
-func (c SequenceSchema) Drop() {
+func (c SequenceSchema) Drop(obj interface{}) {
 	fmt.Printf("DROP SEQUENCE IF EXISTS %s;\n", c.get("sequence_name"))
 }
 

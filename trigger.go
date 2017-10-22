@@ -78,12 +78,22 @@ func (c *TriggerSchema) Compare(obj interface{}) int {
 }
 
 // Add returns SQL to create the trigger
-func (c TriggerSchema) Add() {
+func (c TriggerSchema) Add(obj interface{}) {
+	c2, ok := obj.(*TriggerSchema)
+	if !ok {
+		fmt.Println("Error!!!, Add needs a TriggerSchema instance", c2)
+	}
+
 	fmt.Printf("%s;\n", c.get("definition"))
 }
 
 // Drop returns SQL to drop the trigger
-func (c TriggerSchema) Drop() {
+func (c TriggerSchema) Drop(obj interface{}) {
+	c2, ok := obj.(*TriggerSchema)
+	if !ok {
+		fmt.Println("Error!!!, Drop needs a TriggerSchema instance", c2)
+	}
+
 	fmt.Printf("DROP TRIGGER %s ON %s;\n", c.get("trigger_name"), c.get("table_name"))
 }
 

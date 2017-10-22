@@ -18,8 +18,8 @@ import "github.com/joncrlsn/pgutil"
 // added, dropped, or changed to match another database.
 type Schema interface {
 	Compare(schema interface{}) int
-	Add()
-	Drop()
+	Add(schema interface{})
+	Drop(schema interface{})
 	Change(schema interface{})
 	NextRow() bool
 }
@@ -60,16 +60,24 @@ func main() {
 
 	if *versionPtr {
 		fmt.Fprintf(os.Stderr, "%s - version %s\n", os.Args[0], version)
-		fmt.Fprintln(os.Stderr, "Copyright (c) 2016 Jon Carlson.  All rights reserved.")
+		fmt.Fprintln(os.Stderr, "Copyright (c) 2017 Jon Carlson.  All rights reserved.")
 		fmt.Fprintln(os.Stderr, "Use of this source code is governed by the MIT license")
 		fmt.Fprintln(os.Stderr, "that can be found here: http://opensource.org/licenses/MIT")
 		os.Exit(1)
 	}
 
 	if len(args) == 0 {
-		fmt.Println("The required first argument is SchemaType: ROLE, SEQUENCE, TABLE, VIEW, COLUMN, INDEX, FOREIGN_KEY, OWNER, GRANT_RELATIONSHIP, GRANT_ATTRIBUTE")
+		fmt.Println("The required first argument is SchemaType: SCHEMA, ROLE, SEQUENCE, TABLE, VIEW, COLUMN, INDEX, FOREIGN_KEY, OWNER, GRANT_RELATIONSHIP, GRANT_ATTRIBUTE")
 		os.Exit(1)
 	}
+
+	// Verify schemas
+	schemas := dbInfo1.DbSchema + dbInfo2.DbSchema
+	if schemas != "**" && strings.Contains(schemas, "*") {
+		fmt.Println("If one schema is an asterisk, both must be.")
+		os.Exit(1)
+	}
+
 	schemaType = strings.ToUpper(args[0])
 	fmt.Println("-- schemaType:", schemaType)
 
@@ -87,6 +95,9 @@ func main() {
 	// of alter statements to generate.  Rather, all should be generated in the
 	// proper order.
 	if schemaType == "ALL" {
+		if dbInfo1.DbSchema == "*" {
+			compareSchematas(conn1, conn2)
+		}
 		compareRoles(conn1, conn2)
 		compareFunctions(conn1, conn2)
 		compareSchematas(conn1, conn2)
@@ -149,21 +160,21 @@ func doDiff(db1 Schema, db2 Schema) {
 		} else if compareVal < 0 {
 			// db2 is missing a value that db1 has
 			if more1 {
-				db1.Add()
+				db1.Add(db2)
 				more1 = db1.NextRow()
 			} else {
 				// db1 is at the end
-				db2.Drop()
+				db2.Drop(db2)
 				more2 = db2.NextRow()
 			}
 		} else if compareVal > 0 {
 			// db2 has an extra column that we don't want
 			if more2 {
-				db2.Drop()
+				db2.Drop(db2)
 				more2 = db2.NextRow()
 			} else {
 				// db2 is at the end
-				db1.Add()
+				db1.Add(db2)
 				more1 = db1.NextRow()
 			}
 		}
@@ -183,14 +194,16 @@ Options:
   -v, --verbose : print extra run information
   -U, --user1   : first postgres user 
   -u, --user2   : second postgres user 
-  -H, --host1   : first database host. default is localhost 
+  -H, --host1   : first database host.  default is localhost 
   -h, --host2   : second database host. default is localhost 
-  -P, --port1   : first port. default is 5432 
+  -P, --port1   : first port.  default is 5432 
   -p, --port2   : second port. default is 5432 
   -D, --dbname1 : first database name 
   -d, --dbname2 : second database name 
+  -S, --schema1 : first schema.  default is public
+  -s, --schema2 : second schema. default is public
 
-<schemaTpe> can be: ROLE, SEQUENCE, TABLE, VIEW, COLUMN, INDEX, FOREIGN_KEY, OWNER, GRANT_RELATIONSHIP, GRANT_ATTRIBUTE
+<schemaTpe> can be: SCHEMA ROLE, SEQUENCE, TABLE, VIEW, COLUMN, INDEX, FOREIGN_KEY, OWNER, GRANT_RELATIONSHIP, GRANT_ATTRIBUTE
 `)
 
 	os.Exit(2)

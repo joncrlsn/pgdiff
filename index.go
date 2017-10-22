@@ -99,8 +99,13 @@ func (c *IndexSchema) Compare(obj interface{}) int {
 }
 
 // Add prints SQL to add the column
-func (c *IndexSchema) Add() {
+func (c *IndexSchema) Add(obj interface{}) {
 	//fmt.Println("--\n--Add\n--")
+	c2, ok := obj.(*IndexSchema)
+	if !ok {
+		fmt.Println("-- Error!!!, Add needs an IndexSchema instance", c2)
+	}
+
 
 	// Assertion
 	if c.get("index_def") == "null" || len(c.get("index_def")) == 0 {
@@ -124,8 +129,13 @@ func (c *IndexSchema) Add() {
 }
 
 // Drop prints SQL to drop the column
-func (c *IndexSchema) Drop() {
+func (c *IndexSchema) Drop(obj interface{}) {
 	//fmt.Println("--\n--Drop\n--")
+	c2, ok := obj.(*IndexSchema)
+	if !ok {
+		fmt.Println("-- Error!!!, Drop needs an IndexSchema instance", c2)
+	}
+
 	if c.get("constraint_def") != "null" {
 		fmt.Println("-- Warning, this may drop foreign keys pointing at this column.  Make sure you re-run the FOREIGN_KEY diff after running this SQL.")
 		//fmt.Printf("ALTER TABLE ONLY %s DROP CONSTRAINT IF EXISTS %s CASCADE; -- %s\n", c.get("table_name"), c.get("index_name"), c.get("constraint_def"))
@@ -140,8 +150,9 @@ func (c *IndexSchema) Drop() {
 func (c *IndexSchema) Change(obj interface{}) {
 	c2, ok := obj.(*IndexSchema)
 	if !ok {
-		fmt.Println("-- Error!!!, change needs an IndexSchema instance", c2)
+		fmt.Println("-- Error!!!, Change needs an IndexSchema instance", c2)
 	}
+
 	// Table and constraint name matches... We need to make sure the details match
 
 	// NOTE that there should always be an index_def for both c and c2 (but we're checking below anyway)
@@ -195,10 +206,10 @@ func (c *IndexSchema) Change(obj interface{}) {
 			fmt.Printf("--CHANGE: Different index defs:\n--    %s\n--    %s\n", c.get("index_def"), c2.get("index_def"))
 
 			// Drop the index (and maybe the constraint) so we can recreate the index
-			c.Drop()
+			c.Drop(c2)
 
 			// Recreate the index (and a constraint if specified)
-			c.Add()
+			c.Add(c2)
 		}
 	}
 
