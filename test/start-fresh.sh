@@ -1,0 +1,13 @@
+#!/bin/bash
+
+sudo su - postgres -- <<EOT
+psql <<'SQL'
+    DROP DATABASE IF EXISTS db1;
+    DROP DATABASE IF EXISTS db2;
+    DROP USER IF EXISTS u1;
+    CREATE USER u1 WITH SUPERUSER PASSWORD 'asdf';
+    CREATE DATABASE db1 WITH OWNER = u1 TEMPLATE = template1;
+    CREATE DATABASE db2 WITH OWNER = u1 TEMPLATE = template1;
+SQL
+EOT 
+
