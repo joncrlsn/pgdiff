@@ -105,22 +105,18 @@ func (c *TableSchema) Compare(obj interface{}) int {
 }
 
 // Add returns SQL to add the table or view
-func (c TableSchema) Add(obj interface{}) {
-	c2, ok := obj.(*TableSchema)
-	if !ok {
-		fmt.Println("Error!!!, Add needs a TableSchema instance", c2)
+func (c TableSchema) Add() {
+	schema := dbInfo2.DbSchema
+	if schema == "*" {
+		schema = c.get("table_schema")
 	}
-	fmt.Printf("CREATE %s %s.%s();", c.get("table_type"), c2.get("table_schema"), c.get("table_name"))
+	fmt.Printf("CREATE %s %s.%s();", c.get("table_type"), schema, c.get("table_name"))
 	fmt.Println()
 }
 
 // Drop returns SQL to drop the table or view
-func (c TableSchema) Drop(obj interface{}) {
-	c2, ok := obj.(*TableSchema)
-	if !ok {
-		fmt.Println("Error!!!, Drop needs a TableSchema instance", c2)
-	}
-	fmt.Printf("DROP %s IF EXISTS %s.%s;\n", c.get("table_type"), c2.get("table_schema"), c.get("table_name"))
+func (c TableSchema) Drop() {
+	fmt.Printf("DROP %s IF EXISTS %s.%s;\n", c.get("table_type"), c.get("table_schema"), c.get("table_name"))
 }
 
 // Change handles the case where the table and column match, but the details do not

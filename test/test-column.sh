@@ -3,25 +3,19 @@
 # Useful for visually inspecting the output SQL to verify it is doing what it should
 #
 
-sudo su - postgres -- <<EOT
-psql <<'SQL'
-    DROP DATABASE IF EXISTS db1;
-    DROP DATABASE IF EXISTS db2;
-    DROP USER IF EXISTS u1;
-    CREATE USER u1 WITH SUPERUSER PASSWORD 'asdf';
-    CREATE DATABASE db1 WITH OWNER = u1 TEMPLATE = template1;
-    CREATE DATABASE db2 WITH OWNER = u1 TEMPLATE = template1;
-SQL
-EOT
-export PGPASSWORD=asdf
+source ./start-fresh.sh >/dev/null
 
 echo
 echo "# Compare the tables in two schemas in the same database"
+echo "# Expect SQL:"
+echo "#   Add s2.table1.id"
+echo "#   Drop s2.table1.description"
+echo "#   Alter s2.table1.name to varchar(24)"
 
 #
 # Compare the columns in two schemas in the same database
 #
-psql -U u1 -h localhost -d db1 <<'EOS'
+./populate-db.sh db1 "
     CREATE SCHEMA s1;
     CREATE TABLE s1.table1 (
       id integer, 
@@ -31,15 +25,46 @@ psql -U u1 -h localhost -d db1 <<'EOS'
     CREATE SCHEMA s2;
     CREATE TABLE s2.table1(
                               -- id will be added to s2
-      name varchar(20),       -- name will grow to 24 in s2
+      name varchar(12),       -- name will grow to 24 in s2
       description varchar(24) -- description will be dropped in s2
     );
-    
-EOS
-
+" 
 
 echo
 echo "SQL to run:"
 ../pgdiff -U "u1" -W "asdf" -H "localhost" -D "db1" -S "s1" -O "sslmode=disable" \
           -u "u1" -w "asdf" -h "localhost" -d "db1" -s "s2" -o "sslmode=disable" \
-          COLUMN
+          COLUMN | grep -v '^-- '
+
+echo
+echo ==============================================================
+echo
+
+echo "# Compare the columns in all schemas in two databases"
+echo "# Expect SQL:"
+echo "#   Drop column_to_delete from s1.table1 (in db2)"
+echo "#   Add s1.table1.name  (in db2) "
+echo "#   Alter s2.table1.name to varchar(24)"
+#
+# Compare the columns in all schemas in two database
+#
+./populate-db.sh db2 "
+    CREATE SCHEMA s1;
+    CREATE TABLE s1.table1 (
+      id integer, 
+                                -- Name will be added
+      column_to_delete integer  -- This will be deleted
+    );
+
+    CREATE SCHEMA s2;
+    CREATE TABLE s2.table1(
+      name varchar(24),       -- name will change to varchar(12)
+      description varchar(24) -- description will be dropped in s2
+    );
+"
+
+echo
+echo "SQL to run:"
+../pgdiff -U "u1" -W "asdf" -H "localhost" -D "db1" -S "*" -O "sslmode=disable" \
+          -u "u1" -w "asdf" -h "localhost" -d "db2" -s "*" -o "sslmode=disable" \
+          COLUMN | grep -v '^-- '

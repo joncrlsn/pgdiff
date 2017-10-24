@@ -72,25 +72,15 @@ func (c *SchemataSchema) Compare(obj interface{}) int {
 }
 
 // Add returns SQL to add the schemata
-func (c SchemataSchema) Add(obj interface{}) {
+func (c SchemataSchema) Add() {
 	// CREATE SCHEMA schema_name [ AUTHORIZATION user_name
-	c2, ok := obj.(*SchemataSchema)
-	if !ok {
-		fmt.Println("Error!!!, Add needs a SchemataSchema instance", c2)
-	}
-
 	fmt.Printf("CREATE SCHEMA %s AUTHORIZATION %s;", c.get("schema_name"), c.get("schema_owner"))
 	fmt.Println()
 }
 
 // Drop returns SQL to drop the schemata
-func (c SchemataSchema) Drop(obj interface{}) {
+func (c SchemataSchema) Drop() {
 	// DROP SCHEMA [ IF EXISTS ] name [, ...] [ CASCADE | RESTRICT ]
-	c2, ok := obj.(*SchemataSchema)
-	if !ok {
-		fmt.Println("Error!!!, Drop needs a SchemataSchema instance", c2)
-	}
-
 	fmt.Printf("DROP SCHEMA IF EXISTS %s;\n", c.get("schema_name"))
 }
 

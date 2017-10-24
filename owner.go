@@ -82,22 +82,12 @@ func (c *OwnerSchema) Compare(obj interface{}) int {
 }
 
 // Add generates SQL to add the table/view owner
-func (c OwnerSchema) Add(obj interface{}) {
-	c2, ok := obj.(*OwnerSchema)
-	if !ok {
-		fmt.Println("-- Error!!!, Add needs a OwnerSchema instance", c2)
-	}
-
+func (c OwnerSchema) Add() {
 	fmt.Printf("-- Notice, db2 has no %s named %s. You probably need to run pgdiff with the %s option first.\n", c.get("type"), c.get("relationship_name"), c.get("type"))
 }
 
-// Drop generates SQL to drop the role
-func (c OwnerSchema) Drop(obj interface{}) {
-	c2, ok := obj.(*OwnerSchema)
-	if !ok {
-		fmt.Println("-- Error!!!, Drop needs a OwnerSchema instance", c2)
-	}
-
+// Drop generates SQL to drop the owner
+func (c OwnerSchema) Drop() {
 	fmt.Printf("-- Notice, db2 has a %s that db1 does not: %s. Cannot compare owners.\n", c.get("type"), c.get("relationship_name"))
 }
 

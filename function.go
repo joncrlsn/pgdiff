@@ -72,22 +72,14 @@ func (c *FunctionSchema) Compare(obj interface{}) int {
 }
 
 // Add returns SQL to create the function
-func (c FunctionSchema) Add(obj interface{}) {
-	c2, ok := obj.(*FunctionSchema)
-	if !ok {
-		fmt.Println("Error!!!, FunctionSchema.Add needs a FunctionSchema instance", c2)
-	}
+func (c FunctionSchema) Add() {
 	fmt.Println("-- STATEMENT-BEGIN")
 	fmt.Println(c.get("definition"))
 	fmt.Println("-- STATEMENT-END")
 }
 
 // Drop returns SQL to drop the function
-func (c FunctionSchema) Drop(obj interface{}) {
-	c2, ok := obj.(*FunctionSchema)
-	if !ok {
-		fmt.Println("Error!!!, FunctionSchema.Drop needs a FunctionSchema instance", c2)
-	}
+func (c FunctionSchema) Drop() {
 	fmt.Println("-- Note that CASCADE in the statement below will also drop any triggers depending on this function.")
 	fmt.Println("-- Also, if there are two functions with this name, you will need to add arguments to identify the correct one to drop.")
 	fmt.Println("-- (See http://www.postgresql.org/docs/9.4/interactive/sql-dropfunction.html) ")

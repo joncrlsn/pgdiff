@@ -120,24 +120,25 @@ func (c *ColumnSchema) Compare(obj interface{}) int {
 }
 
 // Add prints SQL to add the column
-func (c *ColumnSchema) Add(obj interface{}) {
-	c2, ok := obj.(*ColumnSchema)
-	if !ok {
-		fmt.Println("Error!!!, ColumnSchema.Add(obj) needs a ColumnSchema instance", c2)
+func (c *ColumnSchema) Add() {
+	
+	schema := dbInfo2.DbSchema
+	if schema == "*" {
+		schema = c.get("table_schema")
 	}
 
 	if c.get("data_type") == "character varying" {
 		maxLength, valid := getMaxLength(c.get("character_maximum_length"))
 		if !valid {
-			fmt.Printf("ALTER TABLE %s.%s ADD COLUMN %s character varying", c2.get("table_schema"), c.get("table_name"), c.get("column_name"))
+			fmt.Printf("ALTER TABLE %s.%s ADD COLUMN %s character varying", schema, c.get("table_name"), c.get("column_name"))
 		} else {
-			fmt.Printf("ALTER TABLE %s.%s ADD COLUMN %s character varying(%s)", c2.get("table_schema"), c.get("table_name"), c.get("column_name"), maxLength)
+			fmt.Printf("ALTER TABLE %s.%s ADD COLUMN %s character varying(%s)", schema, c.get("table_name"), c.get("column_name"), maxLength)
 		}
 	} else {
 		if c.get("data_type") == "ARRAY" {
 			fmt.Println("-- Note that adding of array data types are not yet generated properly.")
 		}
-		fmt.Printf("ALTER TABLE %s.%s ADD COLUMN %s %s", c2.get("table_schema"), c.get("table_name"), c.get("column_name"), c.get("data_type"))
+		fmt.Printf("ALTER TABLE %s.%s ADD COLUMN %s %s", schema, c.get("table_name"), c.get("column_name"), c.get("data_type"))
 	}
 
 	if c.get("is_nullable") == "NO" {
@@ -150,13 +151,9 @@ func (c *ColumnSchema) Add(obj interface{}) {
 }
 
 // Drop prints SQL to drop the column
-func (c *ColumnSchema) Drop(obj interface{}) {
-	c2, ok := obj.(*ColumnSchema)
-	if !ok {
-		fmt.Println("Error!!!, ColumnSchema.Drop(obj) needs a ColumnSchema instance", c2)
-	}
+func (c *ColumnSchema) Drop() {
 	// if dropping column
-	fmt.Printf("ALTER TABLE %s.%s DROP COLUMN IF EXISTS %s;\n", c2.get("table_schema"), c2.get("table_name"), c2.get("column_name"))
+	fmt.Printf("ALTER TABLE %s.%s DROP COLUMN IF EXISTS %s;\n", c.get("table_schema"), c.get("table_name"), c.get("column_name"))
 }
 
 // Change handles the case where the table and column match, but the details do not

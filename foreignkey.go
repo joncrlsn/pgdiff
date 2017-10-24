@@ -90,20 +90,12 @@ func (c *ForeignKeySchema) Compare(obj interface{}) int {
 }
 
 // Add returns SQL to add the foreign key
-func (c *ForeignKeySchema) Add(obj interface{}) {
-	c2, ok := obj.(*ForeignKeySchema)
-	if !ok {
-		fmt.Println("Error!!!, ForeignKeySchema.Add(obj) needs a ForeignKeySchema instance", c2)
-	}
+func (c *ForeignKeySchema) Add() {
 	fmt.Printf("ALTER TABLE %s ADD CONSTRAINT %s %s;\n", c.get("table_name"), c.get("fk_name"), c.get("constraint_def"))
 }
 
 // Drop returns SQL to drop the foreign key
-func (c ForeignKeySchema) Drop(obj interface{}) {
-	c2, ok := obj.(*ForeignKeySchema)
-	if !ok {
-		fmt.Println("Error!!!, ForeignKeySchema.Drop(obj) needs a ForeignKeySchema instance", c2)
-	}
+func (c ForeignKeySchema) Drop() {
 	fmt.Printf("ALTER TABLE %s DROP CONSTRAINT %s; -- %s\n", c.get("table_name"), c.get("fk_name"), c.get("constraint_def"))
 }
 
