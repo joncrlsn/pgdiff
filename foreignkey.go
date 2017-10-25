@@ -6,11 +6,49 @@
 
 package main
 
-import "sort"
-import "fmt"
-import "database/sql"
-import "github.com/joncrlsn/pgutil"
-import "github.com/joncrlsn/misc"
+import (
+	"sort"
+ "fmt"
+ "database/sql"
+ "github.com/joncrlsn/pgutil"
+ "github.com/joncrlsn/misc"
+ )
+
+
+var (
+	foreignKeySqlTemplate = initForeignKeySqlTemplate()
+)
+
+
+// Initializes the Sql template
+func initForeignKeySqlTemplate() *template.Template {
+ 	sql := `
+SELECT {{if eq $.DbSchema "*" }}ns.nspname || '.' || {{end}}cl.relname || '.' || c.conname AS compare_name
+    , ns.nspname AS schema_name
+	, cl.relname AS table_name
+    , c.conname AS fk_name
+	, pg_catalog.pg_get_constraintdef(c.oid, true) as constraint_def
+FROM pg_catalog.pg_constraint c
+INNER JOIN pg_class AS cl ON (c.conrelid = cl.oid)
+INNER JOIN pg_namespace AS ns ON (ns.oid = c.connamespace)
+WHERE c.contype = 'f'
+{{if eq $.DbSchema "*"}}
+AND ns.nspname NOT LIKE 'pg_%' 
+AND ns.nspname <> 'information_schema' 
+{{else}}
+AND ns.nspname = '{{$.DbSchema}}'
+{{end}}
+`
+	t := template.New("ForeignKeySqlTmpl")
+	template.Must(t.Parse(sql))
+	return t
+}
+
+
+// ==================================
+// ForeignKeyRows definition
+// ==================================
+
 
 // ForeignKeyRows is a sortable string map
 type ForeignKeyRows []map[string]string
@@ -20,13 +58,10 @@ func (slice ForeignKeyRows) Len() int {
 }
 
 func (slice ForeignKeyRows) Less(i, j int) bool {
-	if slice[i]["table_name"] != slice[j]["table_name"] {
-		return slice[i]["table_name"] < slice[j]["table_name"]
+	if slice[i]["compare_name"] != slice[j]["compare_name"] {
+	    return slice[i]["compare_name"] < slice[j]["compare_name"]
 	}
-	if slice[i]["constraint_def"] != slice[j]["constraint_def"] {
-		return slice[i]["constraint_def"] < slice[j]["constraint_def"]
-	}
-	return slice[i]["table_name"] < slice[j]["table_name"]
+	return slice[i]["constraint_def"] < slice[j]["constraint_def"]
 }
 
 func (slice ForeignKeyRows) Swap(i, j int) {
@@ -80,7 +115,7 @@ func (c *ForeignKeySchema) Compare(obj interface{}) int {
 	}
 
 	//fmt.Printf("Comparing %s with %s", c.get("table_name"), c2.get("table_name"))
-	val := misc.CompareStrings(c.get("table_name"), c2.get("table_name"))
+	val := misc.CompareStrings(c.get("compare_name"), c2.get("compare_name"))
 	if val != 0 {
 		return val
 	}
@@ -91,37 +126,36 @@ func (c *ForeignKeySchema) Compare(obj interface{}) int {
 
 // Add returns SQL to add the foreign key
 func (c *ForeignKeySchema) Add() {
-	fmt.Printf("ALTER TABLE %s ADD CONSTRAINT %s %s;\n", c.get("table_name"), c.get("fk_name"), c.get("constraint_def"))
+	fmt.Printf("ALTER TABLE %s.%s ADD CONSTRAINT %s %s;\n", c.get("schema_name"), c.get("table_name"), c.get("fk_name"), c.get("constraint_def"))
 }
 
 // Drop returns SQL to drop the foreign key
-func (c ForeignKeySchema) Drop() {
-	fmt.Printf("ALTER TABLE %s DROP CONSTRAINT %s; -- %s\n", c.get("table_name"), c.get("fk_name"), c.get("constraint_def"))
+func (c ForeignKeySchema) Drop() 
+	fmt.Printf("ALTER TABLE %s.%s DROP CONSTRAINT %s; -- %s\n", c.get("schema_name"), c.get("table_name"), c.get("fk_name"), c.get("constraint_def"))
 }
 
 // Change handles the case where the table and foreign key name, but the details do not
 func (c *ForeignKeySchema) Change(obj interface{}) {
 	c2, ok := obj.(*ForeignKeySchema)
 	if !ok {
-		fmt.Println("Error!!!, ForeignKeySchema.Change(obj) needs a ForeignKeySchema instance", c2)
+	    fmt.Println("Error!!!, ForeignKeySchema.Change(obj) needs a ForeignKeySchema instance", c2)
 	}
 	// There is no "changing" a foreign key.  It either gets created or dropped (or left as-is).
 }
 
 /*
- * Compare the foreign keys in the two databases.  We do not recreate foreign keys if just the name is different.
+ * Compare the foreign keys in the two databases. 
  */
-func compareForeignKeys(conn1 *sql.DB, conn2 *sql.DB) {
-	sql := `
-SELECT c.conname AS fk_name
-	, cl.relname AS table_name
-	, pg_catalog.pg_get_constraintdef(c.oid, true) as constraint_def
-FROM pg_catalog.pg_constraint c
-INNER JOIN pg_class AS cl ON (c.conrelid = cl.oid)
-WHERE c.contype = 'f';
-`
-	rowChan1, _ := pgutil.QueryStrings(conn1, sql)
-	rowChan2, _ := pgutil.QueryStrings(conn2, sql)
+func compareForeignKeys(conn1 *sql.DB, conn2 *sql.DB) {	
+	
+	buf1 := new(bytes.Buffer)
+	foreignKeySqlTemplate.Execute(buf1, dbInfo1)
+
+	buf2 := new(bytes.Buffer)
+	foreignKeySqlTemplate.Execute(buf2, dbInfo2)
+
+	rowChan1, _ := pgutil.QueryStrings(conn1, buf1.String())
+	rowChan2, _ := pgutil.QueryStrings(conn2, buf2.String())
 
 	rows1 := make(ForeignKeyRows, 0)
 	for row := range rowChan1 {
