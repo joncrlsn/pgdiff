@@ -52,6 +52,7 @@ ORDER BY compare_name;
 
 // TableRows is a sortable slice of string maps
 type TableRows []map[string]string
+
 func (slice TableRows) Len() int {
 	return len(slice)
 }

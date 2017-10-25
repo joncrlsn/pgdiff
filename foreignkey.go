@@ -1,5 +1,5 @@
 //
-// Copyright (c) 2014 Jon Carlson.  All rights reserved.
+// Copyright (c) 2017 Jon Carlson.  All rights reserved.
 // Use of this source code is governed by an MIT-style
 // license that can be found in the LICENSE file.
 //
@@ -7,22 +7,22 @@
 package main
 
 import (
+	"bytes"
+	"database/sql"
+	"fmt"
+	"github.com/joncrlsn/misc"
+	"github.com/joncrlsn/pgutil"
 	"sort"
- "fmt"
- "database/sql"
- "github.com/joncrlsn/pgutil"
- "github.com/joncrlsn/misc"
- )
-
+	"text/template"
+)
 
 var (
 	foreignKeySqlTemplate = initForeignKeySqlTemplate()
 )
 
-
 // Initializes the Sql template
 func initForeignKeySqlTemplate() *template.Template {
- 	sql := `
+	sql := `
 SELECT {{if eq $.DbSchema "*" }}ns.nspname || '.' || {{end}}cl.relname || '.' || c.conname AS compare_name
     , ns.nspname AS schema_name
 	, cl.relname AS table_name
@@ -44,11 +44,9 @@ AND ns.nspname = '{{$.DbSchema}}'
 	return t
 }
 
-
 // ==================================
 // ForeignKeyRows definition
 // ==================================
-
 
 // ForeignKeyRows is a sortable string map
 type ForeignKeyRows []map[string]string
@@ -59,7 +57,7 @@ func (slice ForeignKeyRows) Len() int {
 
 func (slice ForeignKeyRows) Less(i, j int) bool {
 	if slice[i]["compare_name"] != slice[j]["compare_name"] {
-	    return slice[i]["compare_name"] < slice[j]["compare_name"]
+		return slice[i]["compare_name"] < slice[j]["compare_name"]
 	}
 	return slice[i]["constraint_def"] < slice[j]["constraint_def"]
 }
@@ -126,11 +124,15 @@ func (c *ForeignKeySchema) Compare(obj interface{}) int {
 
 // Add returns SQL to add the foreign key
 func (c *ForeignKeySchema) Add() {
-	fmt.Printf("ALTER TABLE %s.%s ADD CONSTRAINT %s %s;\n", c.get("schema_name"), c.get("table_name"), c.get("fk_name"), c.get("constraint_def"))
+	schema := dbInfo2.DbSchema
+	if schema == "*" {
+		schema = c.get("schema_name")
+	}
+	fmt.Printf("ALTER TABLE %s.%s ADD CONSTRAINT %s %s;\n", schema, c.get("table_name"), c.get("fk_name"), c.get("constraint_def"))
 }
 
 // Drop returns SQL to drop the foreign key
-func (c ForeignKeySchema) Drop() 
+func (c ForeignKeySchema) Drop() {
 	fmt.Printf("ALTER TABLE %s.%s DROP CONSTRAINT %s; -- %s\n", c.get("schema_name"), c.get("table_name"), c.get("fk_name"), c.get("constraint_def"))
 }
 
@@ -138,16 +140,16 @@ func (c ForeignKeySchema) Drop()
 func (c *ForeignKeySchema) Change(obj interface{}) {
 	c2, ok := obj.(*ForeignKeySchema)
 	if !ok {
-	    fmt.Println("Error!!!, ForeignKeySchema.Change(obj) needs a ForeignKeySchema instance", c2)
+		fmt.Println("Error!!!, ForeignKeySchema.Change(obj) needs a ForeignKeySchema instance", c2)
 	}
 	// There is no "changing" a foreign key.  It either gets created or dropped (or left as-is).
 }
 
 /*
- * Compare the foreign keys in the two databases. 
+ * Compare the foreign keys in the two databases.
  */
-func compareForeignKeys(conn1 *sql.DB, conn2 *sql.DB) {	
-	
+func compareForeignKeys(conn1 *sql.DB, conn2 *sql.DB) {
+
 	buf1 := new(bytes.Buffer)
 	foreignKeySqlTemplate.Execute(buf1, dbInfo1)
 

@@ -1,17 +1,56 @@
 //
-// Copyright (c) 2014 Jon Carlson.  All rights reserved.
+// Copyright (c) 2017 Jon Carlson.  All rights reserved.
 // Use of this source code is governed by an MIT-style
 // license that can be found in the LICENSE file.
 //
 
 package main
 
-import "sort"
-import "fmt"
-import "strings"
-import "database/sql"
-import "github.com/joncrlsn/pgutil"
-import "github.com/joncrlsn/misc"
+import (
+	"bytes"
+	"database/sql"
+	"fmt"
+	"github.com/joncrlsn/misc"
+	"github.com/joncrlsn/pgutil"
+	"sort"
+	"strings"
+	"text/template"
+)
+
+var (
+	indexSqlTemplate = initIndexSqlTemplate()
+)
+
+// Initializes the Sql template
+func initIndexSqlTemplate() *template.Template {
+	sql := `
+SELECT {{if eq $.DbSchema "*" }}n.nspname || '.' || {{end}}c.relname || '.' || c2.relname AS compare_name
+    , n.nspname AS schema_name
+    , c.relname AS table_name
+    , c2.relname AS index_name
+    , i.indisprimary AS pk
+    , i.indisunique AS uq
+    , pg_catalog.pg_get_indexdef(i.indexrelid, 0, true) AS index_def
+    , pg_catalog.pg_get_constraintdef(con.oid, true) AS constraint_def
+    , con.contype AS typ
+FROM pg_catalog.pg_index AS i
+INNER JOIN pg_catalog.pg_class AS c ON (c.oid = i.indrelid)
+INNER JOIN pg_catalog.pg_class AS c2 ON (c2.oid = i.indexrelid)
+LEFT JOIN pg_catalog.pg_constraint con
+    ON (con.conrelid = i.indrelid AND con.conindid = i.indexrelid AND con.contype IN ('p','u','x'))
+INNER JOIN pg_catalog.pg_namespace AS n ON (c2.relnamespace = n.oid)
+WHERE true
+{{if eq $.DbSchema "*"}}
+AND n.nspname NOT LIKE 'pg_%' 
+AND n.nspname <> 'information_schema' 
+{{else}}
+AND n.nspname = '{{$.DbSchema}}'
+{{end}}
+`
+	t := template.New("IndexSqlTmpl")
+	template.Must(t.Parse(sql))
+	return t
+}
 
 // ==================================
 // IndexRows definition
@@ -26,10 +65,7 @@ func (slice IndexRows) Len() int {
 
 func (slice IndexRows) Less(i, j int) bool {
 	//fmt.Printf("--Less %s:%s with %s:%s", slice[i]["table_name"], slice[i]["column_name"], slice[j]["table_name"], slice[j]["column_name"])
-	if slice[i]["table_name"] == slice[j]["table_name"] {
-		return slice[i]["index_name"] < slice[j]["index_name"]
-	}
-	return slice[i]["table_name"] < slice[j]["table_name"]
+	return slice[i]["compare_name"] < slice[j]["compare_name"]
 }
 
 func (slice IndexRows) Swap(i, j int) {
@@ -101,9 +137,14 @@ func (c *IndexSchema) Compare(obj interface{}) int {
 // Add prints SQL to add the column
 func (c *IndexSchema) Add() {
 
+	schema := dbInfo2.DbSchema
+	if schema == "*" {
+		schema = c.get("schema_name")
+	}
+
 	// Assertion
 	if c.get("index_def") == "null" || len(c.get("index_def")) == 0 {
-		fmt.Printf("-- Add Unexpected situation in index.go: there is no index_def for %s %s\n", c.get("table_name"), c.get("index_name"))
+		fmt.Printf("-- Add Unexpected situation in index.go: there is no index_def for %s.%s %s\n", schema, c.get("table_name"), c.get("index_name"))
 		return
 	}
 
@@ -114,10 +155,10 @@ func (c *IndexSchema) Add() {
 		// Create the constraint using the index we just created
 		if c.get("pk") == "true" {
 			// Add primary key using the index
-			fmt.Printf("ALTER TABLE ONLY %s ADD CONSTRAINT %s PRIMARY KEY USING INDEX %s;\n", c.get("table_name"), c.get("index_name"), c.get("index_name"))
+			fmt.Printf("ALTER TABLE ONLY %s.%s ADD CONSTRAINT %s PRIMARY KEY USING INDEX %s;\n", schema, c.get("table_name"), c.get("index_name"), c.get("index_name"))
 		} else if c.get("uq") == "true" {
 			// Add unique constraint using the index
-			fmt.Printf("ALTER TABLE ONLY %s ADD CONSTRAINT %s UNIQUE USING INDEX %s;\n", c.get("table_name"), c.get("index_name"), c.get("index_name"))
+			fmt.Printf("ALTER TABLE ONLY %s.%s ADD CONSTRAINT %s UNIQUE USING INDEX %s;\n", schema, c.get("table_name"), c.get("index_name"), c.get("index_name"))
 		}
 	}
 }
@@ -127,11 +168,11 @@ func (c *IndexSchema) Drop() {
 	if c.get("constraint_def") != "null" {
 		fmt.Println("-- Warning, this may drop foreign keys pointing at this column.  Make sure you re-run the FOREIGN_KEY diff after running this SQL.")
 		//fmt.Printf("ALTER TABLE ONLY %s DROP CONSTRAINT IF EXISTS %s CASCADE; -- %s\n", c.get("table_name"), c.get("index_name"), c.get("constraint_def"))
-		fmt.Printf("ALTER TABLE ONLY %s DROP CONSTRAINT IF EXISTS %s CASCADE;\n", c.get("table_name"), c.get("index_name"))
+		fmt.Printf("ALTER TABLE ONLY %s.%s DROP CONSTRAINT IF EXISTS %s CASCADE;\n", c.get("schema_name"), c.get("table_name"), c.get("index_name"))
 	}
 	// The second line has no index_def
 	//fmt.Printf("DROP INDEX IF EXISTS %s; -- %s \n", c.get("index_name"), c.get("index_def"))
-	fmt.Printf("DROP INDEX IF EXISTS %s;\n", c.get("index_name"))
+	fmt.Printf("DROP INDEX IF EXISTS %s.%s;\n", c.get("schema_name"), c.get("index_name"))
 }
 
 // Change handles the case where the table and column match, but the details do not
@@ -211,27 +252,15 @@ func (c *IndexSchema) Change(obj interface{}) {
  * Compare the columns in the two databases
  */
 func compareIndexes(conn1 *sql.DB, conn2 *sql.DB) {
-	// This SQL was generated with psql -E -c "\d t_org"
-	// The "magic" is in pg_get_indexdef and pg_get_constraint
-	sql := `
-SELECT n.nspname || '.' || c.relname AS table_name
-    , c2.relname AS index_name
-    , i.indisprimary AS pk
-    , i.indisunique AS uq
-    , pg_catalog.pg_get_indexdef(i.indexrelid, 0, true) AS index_def
-    , pg_catalog.pg_get_constraintdef(con.oid, true) AS constraint_def
-    , con.contype AS typ
-FROM pg_catalog.pg_index AS i
-INNER JOIN pg_catalog.pg_class AS c ON (c.oid = i.indrelid)
-INNER JOIN pg_catalog.pg_class AS c2 ON (c2.oid = i.indexrelid)
-LEFT JOIN pg_catalog.pg_constraint con
-    ON (con.conrelid = i.indrelid AND con.conindid = i.indexrelid AND con.contype IN ('p','u','x'))
-INNER JOIN pg_catalog.pg_namespace AS n ON (c2.relnamespace = n.oid)
-WHERE c.relname NOT LIKE 'pg_%'
-AND n.nspname NOT LIKE 'pg_%';
-`
-	rowChan1, _ := pgutil.QueryStrings(conn1, sql)
-	rowChan2, _ := pgutil.QueryStrings(conn2, sql)
+
+	buf1 := new(bytes.Buffer)
+	indexSqlTemplate.Execute(buf1, dbInfo1)
+
+	buf2 := new(bytes.Buffer)
+	indexSqlTemplate.Execute(buf2, dbInfo2)
+
+	rowChan1, _ := pgutil.QueryStrings(conn1, buf1.String())
+	rowChan2, _ := pgutil.QueryStrings(conn2, buf2.String())
 
 	rows1 := make(IndexRows, 0)
 	for row := range rowChan1 {

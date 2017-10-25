@@ -7,15 +7,15 @@
 package main
 
 import (
-"sort"
-"fmt"
-"strconv"
-"strings"
-"database/sql"
-"github.com/joncrlsn/pgutil"
-"github.com/joncrlsn/misc"
-"text/template"
-"bytes"
+	"bytes"
+	"database/sql"
+	"fmt"
+	"github.com/joncrlsn/misc"
+	"github.com/joncrlsn/pgutil"
+	"sort"
+	"strconv"
+	"strings"
+	"text/template"
 )
 
 var (
@@ -47,7 +47,6 @@ ORDER BY compare_name, column_name;
 	template.Must(t.Parse(sql))
 	return t
 }
-
 
 // ==================================
 // Column Rows definition
@@ -121,7 +120,7 @@ func (c *ColumnSchema) Compare(obj interface{}) int {
 
 // Add prints SQL to add the column
 func (c *ColumnSchema) Add() {
-	
+
 	schema := dbInfo2.DbSchema
 	if schema == "*" {
 		schema = c.get("table_schema")
@@ -229,7 +228,7 @@ func (c *ColumnSchema) Change(obj interface{}) {
  * Compare the columns in the two databases
  */
 func compareColumns(conn1 *sql.DB, conn2 *sql.DB) {
-	
+
 	buf1 := new(bytes.Buffer)
 	columnSqlTemplate.Execute(buf1, dbInfo1)
 
@@ -253,13 +252,13 @@ func compareColumns(conn1 *sql.DB, conn2 *sql.DB) {
 	}
 	sort.Sort(&rows2)
 
-    //for _, val := range rows1 {
-		//fmt.Println("list1: ", val["table_schema"], val["compare_name"], val["column_name"], val["character_maximum_length"] )
+	//for _, val := range rows1 {
+	//fmt.Println("list1: ", val["table_schema"], val["compare_name"], val["column_name"], val["character_maximum_length"] )
 	//}
 	//fmt.Println()
 
-    //for _, val := range rows2 {
-		//fmt.Println("list2: ", val["table_schema"], val["compare_name"], val["column_name"], val["character_maximum_length"])
+	//for _, val := range rows2 {
+	//fmt.Println("list2: ", val["table_schema"], val["compare_name"], val["column_name"], val["character_maximum_length"])
 	//}
 
 	// We have to explicitly type this as Schema here for some unknown reason
