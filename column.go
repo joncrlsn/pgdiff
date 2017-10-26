@@ -221,12 +221,10 @@ func (c *ColumnSchema) Change(obj interface{}) {
 }
 
 // ==================================
-// Functions
+// Standalone Functions
 // ==================================
 
-/*
- * Compare the columns in the two databases
- */
+// compareColumns outputs SQL to make the columns match between two databases or schemas
 func compareColumns(conn1 *sql.DB, conn2 *sql.DB) {
 
 	buf1 := new(bytes.Buffer)
