@@ -136,7 +136,6 @@ func (c *IndexSchema) Compare(obj interface{}) int {
 
 // Add prints SQL to add the column
 func (c *IndexSchema) Add() {
-
 	schema := dbInfo2.DbSchema
 	if schema == "*" {
 		schema = c.get("schema_name")
@@ -244,13 +243,7 @@ func (c *IndexSchema) Change(obj interface{}) {
 
 }
 
-// ==================================
-// Functions
-// ==================================
-
-/*
- * Compare the columns in the two databases
- */
+// compareIndexes outputs Sql to make the indexes match between to DBs or schemas
 func compareIndexes(conn1 *sql.DB, conn2 *sql.DB) {
 
 	buf1 := new(bytes.Buffer)
