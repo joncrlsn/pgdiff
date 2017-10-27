@@ -36,7 +36,7 @@ SELECT {{if eq $.DbSchema "*" }}n.nspname || '.' || {{end}}c.relname || '.' || c
 FROM pg_catalog.pg_index AS i
 INNER JOIN pg_catalog.pg_class AS c ON (c.oid = i.indrelid)
 INNER JOIN pg_catalog.pg_class AS c2 ON (c2.oid = i.indexrelid)
-LEFT JOIN pg_catalog.pg_constraint con
+LEFT OUTER JOIN pg_catalog.pg_constraint con
     ON (con.conrelid = i.indrelid AND con.conindid = i.indexrelid AND con.contype IN ('p','u','x'))
 INNER JOIN pg_catalog.pg_namespace AS n ON (c2.relnamespace = n.oid)
 WHERE true
@@ -123,18 +123,11 @@ func (c *IndexSchema) Compare(obj interface{}) int {
 		fmt.Printf("--Comparing (table_name or index_name is empty): %v\n--           %v\n", c.getRow(), c2.getRow())
 	}
 
-	val := misc.CompareStrings(c.get("table_name"), c2.get("table_name"))
-	if val != 0 {
-		// Table name differed so return that value
-		return val
-	}
-
-	// Table name was the same so compare index name
-	val = misc.CompareStrings(c.get("index_name"), c2.get("index_name"))
+	val := misc.CompareStrings(c.get("compare_name"), c2.get("compare_name"))
 	return val
 }
 
-// Add prints SQL to add the column
+// Add prints SQL to add the index
 func (c *IndexSchema) Add() {
 	schema := dbInfo2.DbSchema
 	if schema == "*" {
@@ -154,24 +147,21 @@ func (c *IndexSchema) Add() {
 		// Create the constraint using the index we just created
 		if c.get("pk") == "true" {
 			// Add primary key using the index
-			fmt.Printf("ALTER TABLE ONLY %s.%s ADD CONSTRAINT %s PRIMARY KEY USING INDEX %s;\n", schema, c.get("table_name"), c.get("index_name"), c.get("index_name"))
+			fmt.Printf("ALTER TABLE %s.%s ADD CONSTRAINT %s PRIMARY KEY USING INDEX %s; -- (1)\n", schema, c.get("table_name"), c.get("index_name"), c.get("index_name"))
 		} else if c.get("uq") == "true" {
 			// Add unique constraint using the index
-			fmt.Printf("ALTER TABLE ONLY %s.%s ADD CONSTRAINT %s UNIQUE USING INDEX %s;\n", schema, c.get("table_name"), c.get("index_name"), c.get("index_name"))
+			fmt.Printf("ALTER TABLE %s.%s ADD CONSTRAINT %s UNIQUE USING INDEX %s; -- (2)\n", schema, c.get("table_name"), c.get("index_name"), c.get("index_name"))
 		}
 	}
 }
 
-// Drop prints SQL to drop the column
+// Drop prints SQL to drop the index
 func (c *IndexSchema) Drop() {
 	if c.get("constraint_def") != "null" {
 		fmt.Println("-- Warning, this may drop foreign keys pointing at this column.  Make sure you re-run the FOREIGN_KEY diff after running this SQL.")
-		//fmt.Printf("ALTER TABLE ONLY %s DROP CONSTRAINT IF EXISTS %s CASCADE; -- %s\n", c.get("table_name"), c.get("index_name"), c.get("constraint_def"))
-		fmt.Printf("ALTER TABLE ONLY %s.%s DROP CONSTRAINT IF EXISTS %s CASCADE;\n", c.get("schema_name"), c.get("table_name"), c.get("index_name"))
+		fmt.Printf("ALTER TABLE %s.%s DROP CONSTRAINT %s CASCADE; -- %s\n", c.get("schema_name"), c.get("table_name"), c.get("index_name"), c.get("constraint_def"))
 	}
-	// The second line has no index_def
-	//fmt.Printf("DROP INDEX IF EXISTS %s; -- %s \n", c.get("index_name"), c.get("index_def"))
-	fmt.Printf("DROP INDEX IF EXISTS %s.%s;\n", c.get("schema_name"), c.get("index_name"))
+	fmt.Printf("DROP INDEX %s.%s;\n", c.get("schema_name"), c.get("index_name"))
 }
 
 // Change handles the case where the table and column match, but the details do not
@@ -199,7 +189,7 @@ func (c *IndexSchema) Change(obj interface{}) {
 		if c.get("constraint_def") == "null" {
 			// c1.constraint does not exist, c2.constraint does, so
 			// Drop constraint
-			fmt.Printf("DROP INDEX IF EXISTS %s; -- %s \n", c2.get("index_name"), c2.get("index_def"))
+			fmt.Printf("DROP INDEX %s; -- %s \n", c2.get("index_name"), c2.get("index_def"))
 		} else if c2.get("constraint_def") == "null" {
 			// c1.constraint exists, c2.constraint does not, so
 			// Add constraint
@@ -208,16 +198,16 @@ func (c *IndexSchema) Change(obj interface{}) {
 				// Add constraint using the index
 				if c.get("pk") == "true" {
 					// Add primary key using the index
-					fmt.Printf("ALTER TABLE %s ADD CONSTRAINT %s PRIMARY KEY USING INDEX %s;\n", c.get("table_name"), c.get("index_name"), c.get("index_name"))
+					fmt.Printf("ALTER TABLE %s ADD CONSTRAINT %s PRIMARY KEY USING INDEX %s; -- (3)\n", c.get("table_name"), c.get("index_name"), c.get("index_name"))
 				} else if c.get("uq") == "true" {
 					// Add unique constraint using the index
-					fmt.Printf("ALTER TABLE %s ADD CONSTRAINT %s UNIQUE USING INDEX %s;\n", c.get("table_name"), c.get("index_name"), c.get("index_name"))
+					fmt.Printf("ALTER TABLE %s ADD CONSTRAINT %s UNIQUE USING INDEX %s; -- (4)\n", c.get("table_name"), c.get("index_name"), c.get("index_name"))
 				} else {
 
 				}
 			} else {
 				// Drop the c2 index, create a copy of the c1 index
-				fmt.Printf("DROP INDEX IF EXISTS %s; -- %s \n", c2.get("index_name"), c2.get("index_def"))
+				fmt.Printf("DROP INDEX %s; -- %s \n", c2.get("index_name"), c2.get("index_def"))
 			}
 			// WIP
 			//fmt.Printf("ALTER TABLE %s ADD CONSTRAINT %s %s;\n", c.get("table_name"), c.get("index_name"), c.get("constraint_def"))
@@ -228,7 +218,7 @@ func (c *IndexSchema) Change(obj interface{}) {
 	} else if c.get("index_def") != c2.get("index_def") {
 		if !strings.HasPrefix(c.get("index_def"), c2.get("index_def")) &&
 			!strings.HasPrefix(c2.get("index_def"), c.get("index_def")) {
-			fmt.Println("--\n--Change index defs different\n--")
+			fmt.Println("--\n--Change index defs different:")
 			// Remember, if we are here, then the two constraint_defs match (both may be empty)
 			// The indexes do not match, but the constraints do
 			fmt.Printf("--CHANGE: Different index defs:\n--    %s\n--    %s\n", c.get("index_def"), c2.get("index_def"))

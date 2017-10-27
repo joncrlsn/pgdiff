@@ -37,12 +37,12 @@ echo
 echo "SQL to run:"
 ../pgdiff -U "u1" -W "asdf" -H "localhost" -D "db1" -S "s1" -O "sslmode=disable" \
           -u "u1" -w "asdf" -h "localhost" -d "db1" -s "s2" -o "sslmode=disable" \
-          INDEX | grep -v '^-- '
+          INDEX # | grep -v '^-- '
 
 exit 1
 
 #
-# Compare the foreign keys in all schemas in two databases
+# Compare the indexes in all schemas in two databases
 #
 ./populate-db.sh db2 "
     CREATE SCHEMA s1;
