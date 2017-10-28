@@ -120,7 +120,8 @@ func (c *IndexSchema) Compare(obj interface{}) int {
 	}
 
 	if len(c.get("table_name")) == 0 || len(c.get("index_name")) == 0 {
-		fmt.Printf("--Comparing (table_name or index_name is empty): %v\n--           %v\n", c.getRow(), c2.getRow())
+		fmt.Printf("--Comparing (table_name and/or index_name is empty): %v\n", c.getRow())
+		fmt.Printf("--           %v\n", c2.getRow())
 	}
 
 	val := misc.CompareStrings(c.get("compare_name"), c2.get("compare_name"))
@@ -140,8 +141,18 @@ func (c *IndexSchema) Add() {
 		return
 	}
 
-	// Create the index first
-	fmt.Printf("%s;\n", c.get("index_def"))
+	// If we are comparing two different schemas against each other, we need to do some
+	// modification of the first index_def so we create the index in the write schema
+	indexDef := c.get("index_def")
+	if dbInfo1.DbSchema != dbInfo2.DbSchema {
+		indexDef = strings.Replace(
+			indexDef,
+			fmt.Sprintf(" %s.%s ", c.get("schema_name"), c.get("table_name")),
+			fmt.Sprintf(" %s.%s ", dbInfo2.DbSchema, c.get("table_name")),
+			-1)
+	}
+
+	fmt.Println(indexDef)
 
 	if c.get("constraint_def") != "null" {
 		// Create the constraint using the index we just created
@@ -215,13 +226,33 @@ func (c *IndexSchema) Change(obj interface{}) {
 		} else if c.get("index_def") != c2.get("index_def") {
 			// The constraints match
 		}
-	} else if c.get("index_def") != c2.get("index_def") {
+
+		return
+	}
+
+	// At this point, we know that the constraint_def matches.  Compare the index_def
+
+	indexDef1 := c.get("index_def")
+	indexDef2 := c2.get("index_def")
+
+	// If we are comparing two different schemas against each other, we need to do
+	// some modification of the first index_def so it looks more like the second
+	if dbInfo1.DbSchema != dbInfo2.DbSchema {
+		indexDef1 = strings.Replace(
+			indexDef1,
+			fmt.Sprintf(" %s.%s ", c.get("schema_name"), c.get("table_name")),
+			fmt.Sprintf(" %s.%s ", c2.get("schema_name"), c2.get("table_name")),
+			-1,
+		)
+	}
+
+	if indexDef1 != indexDef2 {
+		// Notice that, if we are here, then the two constraint_defs match (both may be empty)
+		// The indexes do not match, but the constraints do
 		if !strings.HasPrefix(c.get("index_def"), c2.get("index_def")) &&
 			!strings.HasPrefix(c2.get("index_def"), c.get("index_def")) {
-			fmt.Println("--\n--Change index defs different:")
-			// Remember, if we are here, then the two constraint_defs match (both may be empty)
-			// The indexes do not match, but the constraints do
-			fmt.Printf("--CHANGE: Different index defs:\n--    %s\n--    %s\n", c.get("index_def"), c2.get("index_def"))
+			fmt.Println("--\n--CHANGE: index defs are different for identical constraint defs:")
+			fmt.Printf("--    %s\n--    %s\n", c.get("index_def"), c2.get("index_def"))
 
 			// Drop the index (and maybe the constraint) so we can recreate the index
 			c.Drop()
