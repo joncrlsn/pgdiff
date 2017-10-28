@@ -4,6 +4,9 @@
 #
 
 source ./start-fresh.sh >/dev/null
+echo
+echo ==========================================================
+echo
 
 #
 # Compare the indexes in two schemas in the same database
@@ -38,6 +41,7 @@ echo
           -u "u1" -w "asdf" -h "localhost" -d "db1" -s "s2" -o "sslmode=disable" \
           INDEX | grep -v '^-- '
 echo
+echo ==========================================================
 echo
 
 
