@@ -250,15 +250,6 @@ func compareColumns(conn1 *sql.DB, conn2 *sql.DB) {
 	}
 	sort.Sort(&rows2)
 
-	//for _, val := range rows1 {
-	//fmt.Println("list1: ", val["table_schema"], val["compare_name"], val["column_name"], val["character_maximum_length"] )
-	//}
-	//fmt.Println()
-
-	//for _, val := range rows2 {
-	//fmt.Println("list2: ", val["table_schema"], val["compare_name"], val["column_name"], val["character_maximum_length"])
-	//}
-
 	// We have to explicitly type this as Schema here for some unknown reason
 	var schema1 Schema = &ColumnSchema{rows: rows1, rowNum: -1}
 	var schema2 Schema = &ColumnSchema{rows: rows2, rowNum: -1}

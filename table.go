@@ -117,7 +117,7 @@ func (c TableSchema) Add() {
 
 // Drop returns SQL to drop the table or view
 func (c TableSchema) Drop() {
-	fmt.Printf("DROP %s IF EXISTS %s.%s;\n", c.get("table_type"), c.get("table_schema"), c.get("table_name"))
+	fmt.Printf("DROP %s %s.%s;\n", c.get("table_type"), c.get("table_schema"), c.get("table_name"))
 }
 
 // Change handles the case where the table and column match, but the details do not

@@ -78,7 +78,7 @@ func (c ViewSchema) Add() {
 
 // Drop returns SQL to drop the view
 func (c ViewSchema) Drop() {
-	fmt.Printf("DROP VIEW IF EXISTS %s;\n\n", c.get("viewname"))
+	fmt.Printf("DROP VIEW %s;\n\n", c.get("viewname"))
 }
 
 // Change handles the case where the names match, but the definition does not

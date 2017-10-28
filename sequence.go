@@ -6,11 +6,46 @@
 
 package main
 
-import "sort"
-import "fmt"
-import "database/sql"
-import "github.com/joncrlsn/pgutil"
-import "github.com/joncrlsn/misc"
+import (
+	"bytes"
+	"database/sql"
+	"fmt"
+	"github.com/joncrlsn/misc"
+	"github.com/joncrlsn/pgutil"
+	"sort"
+	"text/template"
+)
+
+var (
+	sequenceSqlTemplate = initSequenceSqlTemplate()
+)
+
+// Initializes the Sql template
+func initSequenceSqlTemplate() *template.Template {
+	sql := `
+SELECT sequence_schema,
+    , {{if eq $.DbSchema "*" }}sequence_schema || '.' || {{end}}sequence_name AS compare_name
+    ,  sequence_name AS sequence_name
+	, data_type
+	, start_value
+	, minimum_value
+	, maximum_value
+	, increment
+	, cycle_option 
+FROM information_schema.sequences
+WHERE true
+{{if eq $.DbSchema "*" }}
+AND sequence_schema NOT LIKE 'pg_%' 
+AND sequence_schema <> 'information_schema' 
+{{else}}
+AND sequence_schema = '{{$.DbSchema}}'
+{{end}}
+`
+
+	t := template.New("SequenceSqlTmpl")
+	template.Must(t.Parse(sql))
+	return t
+}
 
 // ==================================
 // SequenceRows definition
@@ -24,7 +59,7 @@ func (slice SequenceRows) Len() int {
 }
 
 func (slice SequenceRows) Less(i, j int) bool {
-	return slice[i]["sequence_name"] < slice[j]["sequence_name"]
+	return slice[i]["compare_name"] < slice[j]["compare_name"]
 }
 
 func (slice SequenceRows) Swap(i, j int) {
@@ -66,22 +101,25 @@ func (c *SequenceSchema) Compare(obj interface{}) int {
 		return +999
 	}
 
-	val := misc.CompareStrings(c.get("sequence_name"), c2.get("sequence_name"))
+	val := misc.CompareStrings(c.get("compare_name"), c2.get("compare_name"))
 	return val
 }
 
-// Add returns SQL to add the table
+// Add returns SQL to add the sequence
 func (c SequenceSchema) Add() {
-	fmt.Printf("CREATE SEQUENCE %s INCREMENT %s MINVALUE %s MAXVALUE %s START %s;\n", c.get("sequence_name"), c.get("increment"), c.get("minimum_value"), c.get("maximum_value"), c.get("start_value"))
-
+	schema := dbInfo2.DbSchema
+	if schema == "*" {
+		schema = c.get("sequence_schema")
+	}
+	fmt.Printf("CREATE SEQUENCE %s.%s INCREMENT %s MINVALUE %s MAXVALUE %s START %s;\n", schema, c.get("sequence_name"), c.get("increment"), c.get("minimum_value"), c.get("maximum_value"), c.get("start_value"))
 }
 
-// Drop returns SQL to drop the table
+// Drop returns SQL to drop the sequence
 func (c SequenceSchema) Drop() {
-	fmt.Printf("DROP SEQUENCE IF EXISTS %s;\n", c.get("sequence_name"))
+	fmt.Printf("DROP SEQUENCE %s.%s;\n", c.get("sequence_schema"), c.get("sequence_name"))
 }
 
-// Change handles the case where the table and column match, but the details do not
+// Change doesn't do anything right now.
 func (c SequenceSchema) Change(obj interface{}) {
 	c2, ok := obj.(*SequenceSchema)
 	if !ok {
@@ -92,20 +130,15 @@ func (c SequenceSchema) Change(obj interface{}) {
 
 // compareSequences outputs SQL to make the sequences match between DBs
 func compareSequences(conn1 *sql.DB, conn2 *sql.DB) {
-	sql := `
-SELECT sequence_schema || '.' || sequence_name AS sequence_name
-	, data_type
-	, start_value
-	, minimum_value
-	, maximum_value
-	, increment
-	, cycle_option 
-FROM information_schema.sequences
-WHERE sequence_schema NOT LIKE 'pg_%';
-`
 
-	rowChan1, _ := pgutil.QueryStrings(conn1, sql)
-	rowChan2, _ := pgutil.QueryStrings(conn2, sql)
+	buf1 := new(bytes.Buffer)
+	sequenceSqlTemplate.Execute(buf1, dbInfo1)
+
+	buf2 := new(bytes.Buffer)
+	sequenceSqlTemplate.Execute(buf2, dbInfo2)
+
+	rowChan1, _ := pgutil.QueryStrings(conn1, buf1.String())
+	rowChan2, _ := pgutil.QueryStrings(conn2, buf2.String())
 
 	rows1 := make(SequenceRows, 0)
 	for row := range rowChan1 {
@@ -119,10 +152,10 @@ WHERE sequence_schema NOT LIKE 'pg_%';
 	}
 	sort.Sort(rows2)
 
-	// We have to explicitly type this as Schema here for some unknown reason
+	// We have to explicitly type this as Schema here for some unknown (to me) reason
 	var schema1 Schema = &SequenceSchema{rows: rows1, rowNum: -1}
 	var schema2 Schema = &SequenceSchema{rows: rows2, rowNum: -1}
 
-	// Compare the tables
+	// Compare the sequences
 	doDiff(schema1, schema2)
 }
