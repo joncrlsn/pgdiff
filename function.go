@@ -1,5 +1,5 @@
 //
-// Copyright (c) 2016 Jon Carlson.  All rights reserved.
+// Copyright (c) 2017 Jon Carlson.  All rights reserved.
 // Use of this source code is governed by an MIT-style
 // license that can be found in the LICENSE file.
 //
@@ -57,7 +57,7 @@ func (slice FunctionRows) Len() int {
 }
 
 func (slice FunctionRows) Less(i, j int) bool {
-	return slice[i]["function_name"] < slice[j]["function_name"]
+	return slice[i]["compare_name"] < slice[j]["compare_name"]
 }
 
 func (slice FunctionRows) Swap(i, j int) {
@@ -99,7 +99,7 @@ func (c *FunctionSchema) Compare(obj interface{}) int {
 		return +999
 	}
 
-	val := misc.CompareStrings(c.get("function_name"), c2.get("function_name"))
+	val := misc.CompareStrings(c.get("compare_name"), c2.get("compare_name"))
 	//fmt.Printf("-- Compared %v: %s with %s \n", val, c.get("function_name"), c2.get("function_name"))
 	return val
 }
@@ -116,7 +116,7 @@ func (c FunctionSchema) Drop() {
 	fmt.Println("-- Note that CASCADE in the statement below will also drop any triggers depending on this function.")
 	fmt.Println("-- Also, if there are two functions with this name, you will need to add arguments to identify the correct one to drop.")
 	fmt.Println("-- (See http://www.postgresql.org/docs/9.4/interactive/sql-dropfunction.html) ")
-	fmt.Printf("DROP FUNCTION %s CASCADE;\n", c.get("function_name"))
+	fmt.Printf("DROP FUNCTION %s.%s CASCADE;\n", c.get("schema_name"), c.get("function_name"))
 }
 
 // Change handles the case where the function names match, but the definition does not

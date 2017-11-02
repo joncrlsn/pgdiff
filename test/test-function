@@ -1,0 +1,95 @@
+#!/bin/bash
+#
+# Useful for visually inspecting the output SQL to verify it is doing what it should
+#
+
+source ./start-fresh.sh >/dev/null
+echo
+echo ==========================================================
+echo
+
+#
+# Compare the functions between two schemas in the same database
+#
+
+./populate-db.sh db1 "$(cat << 'EOF' 
+CREATE SCHEMA s1;
+CREATE OR REPLACE FUNCTION s1.increment(i integer) RETURNS integer AS $$
+    BEGIN
+            RETURN i + 1;
+    END;
+$$ LANGUAGE plpgsql;
+CREATE FUNCTION s1.add(integer, integer) RETURNS integer
+    AS 'select $1 + $2;'
+    LANGUAGE SQL
+    IMMUTABLE
+    RETURNS NULL ON NULL INPUT;
+
+
+CREATE SCHEMA s2;
+CREATE OR REPLACE FUNCTION s2.add(integer, integer) RETURNS integer
+    AS 'select $1 + $2;'
+    LANGUAGE SQL
+    IMMUTABLE
+    RETURNS NULL ON NULL INPUT;
+CREATE FUNCTION s2.minus(integer, integer) RETURNS integer
+    AS 'select $1 - $2;'
+    LANGUAGE SQL
+    IMMUTABLE
+    RETURNS NULL ON NULL INPUT;
+
+EOF
+)"
+
+echo
+echo "# Compare the functions between two schemas in the same database"
+echo "# Expect SQL (pseudocode):"
+echo "#   Add function s2.increment"
+echo "#   Replace function s2.add"
+echo "#   Drop function s2.minus"
+echo
+
+../pgdiff -U "u1" -W "asdf" -H "localhost" -D "db1" -S "s1" -O "sslmode=disable" \
+          -u "u1" -w "asdf" -h "localhost" -d "db1" -s "s2" -o "sslmode=disable" \
+          FUNCTION | grep -v '^-- '
+
+exit 0
+
+echo
+echo ==========================================================
+echo
+
+
+#
+# Compare the functions in all schemas in two databases
+#
+./populate-db.sh db2 "
+    CREATE SCHEMA s1;
+    CREATE TABLE s1.table1 (
+      id integer PRIMARY KEY,
+      name varchar(32),
+      url varchar(200)
+    );
+    CREATE INDEX ON s1.table1(name);
+    CREATE INDEX ON s1.table1(url);
+
+    CREATE SCHEMA s2;
+    CREATE TABLE s2.table1 (
+      id integer PRIMARY KEY, 
+      name varchar(32),
+      url varchar(200)
+    );
+"
+
+echo
+echo "# Compare the functions in all schemas between two databases"
+echo "# Expect SQL (pseudocode):"
+echo "#   Drop index on db2 s1.table1.url"
+echo "#   Add index on db2 s2.table1.url"
+echo
+
+../pgdiff -U "u1" -W "asdf" -H "localhost" -D "db1" -S "*" -O "sslmode=disable" \
+          -u "u1" -w "asdf" -h "localhost" -d "db2" -s "*" -o "sslmode=disable" \
+          FUNCTION | grep -v '^-- '
+echo
+echo
