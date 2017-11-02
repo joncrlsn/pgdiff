@@ -1,0 +1,72 @@
+#!/bin/bash
+#
+# Useful for visually inspecting the output SQL to verify it is doing what it should
+#
+
+source ./start-fresh.sh >/dev/null
+echo
+echo ==========================================================
+echo
+
+#
+# Compare the sequences in two schemas in the same database
+#
+
+./populate-db.sh db1 "
+    CREATE SCHEMA s1;
+    CREATE TABLE s1.table1 (id integer PRIMARY KEY); -- just for kicks
+    CREATE SEQUENCE s1.sequence_1 
+       INCREMENT BY 2
+       MINVALUE 1024 
+       MAXVALUE 99998
+       START WITH 2048
+       NO CYCLE 
+       OWNED BY s1.table1.id;
+    CREATE SEQUENCE s1.sequence_2;
+
+    CREATE SCHEMA s2;
+    CREATE SEQUENCE s2.sequence_2; 
+    CREATE SEQUENCE s2.sequence_3; 
+"
+
+echo
+echo "# Compare the sequences in two schemas in the same database"
+echo "# Expect SQL (pseudocode):"
+echo "#   Add s2.sequence_1"
+echo "#   Drop s2.sequence_3"
+echo
+
+../pgdiff -U "u1" -W "asdf" -H "localhost" -D "db1" -S "s1" -O "sslmode=disable" \
+          -u "u1" -w "asdf" -h "localhost" -d "db1" -s "s2" -o "sslmode=disable" \
+          SEQUENCE | grep -v '^-- '
+
+
+echo
+echo ==========================================================
+echo
+
+#
+# Compare the sequences in all schemas in two databases
+#
+./populate-db.sh db2 "
+    CREATE SCHEMA s1;
+    CREATE SEQUENCE s1.sequence_2;
+
+    CREATE SCHEMA s2;
+    CREATE SEQUENCE s2.sequence_2; 
+    CREATE SEQUENCE s2.sequence_3; 
+    CREATE SEQUENCE s2.sequence_4; 
+"
+
+echo
+echo "# Compare the sequences in all schemas between two databases"
+echo "# Expect SQL (pseudocode):"
+echo "#   Add sequence s1.sequence_1"
+echo "#   Drop sequence s2.sequence_4"
+echo
+
+../pgdiff -U "u1" -W "asdf" -H "localhost" -D "db1" -S "*" -O "sslmode=disable" \
+          -u "u1" -w "asdf" -h "localhost" -d "db2" -s "*" -o "sslmode=disable" \
+          SEQUENCE | grep -v '^-- '
+echo
+echo

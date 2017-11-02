@@ -1,0 +1,34 @@
+#!/bin/bash
+#
+# Useful for visually inspecting the output SQL to verify it is doing what it should
+#
+
+source ./start-fresh.sh >/dev/null
+echo
+echo ==========================================================
+echo
+
+#
+# Compare the schemas (aka schematas) between two databases
+#
+./populate-db.sh db1 "
+    CREATE SCHEMA s1;  -- matches db2
+    CREATE SCHEMA s2;  -- to be added to db2
+"
+./populate-db.sh db2 "
+    CREATE SCHEMA s1;  -- matches db1
+    CREATE SCHEMA s3;  -- to be removed from this db
+"
+
+echo
+echo "# Compare the indexes in all schemas between two databases"
+echo "# Expect SQL (pseudocode):"
+echo "#   Add schema on db2:     s2 "
+echo "#   Drop schema from db2:  s3 "
+echo
+
+../pgdiff -U "u1" -W "asdf" -H "localhost" -D "db1" -S "*" -O "sslmode=disable" \
+          -u "u1" -w "asdf" -h "localhost" -d "db2" -s "*" -o "sslmode=disable" \
+          SCHEMA | grep -v '^-- '
+echo
+echo

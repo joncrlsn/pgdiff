@@ -305,5 +305,6 @@ ORDER BY r.rolname;
 	var schema1 Schema = &RoleSchema{rows: rows1, rowNum: -1}
 	var schema2 Schema = &RoleSchema{rows: rows2, rowNum: -1}
 
+	// Compare the roles
 	doDiff(schema1, schema2)
 }

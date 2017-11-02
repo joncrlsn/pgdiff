@@ -6,11 +6,44 @@
 
 package main
 
-import "fmt"
-import "sort"
-import "database/sql"
-import "github.com/joncrlsn/pgutil"
-import "github.com/joncrlsn/misc"
+import (
+	"database/sql"
+	"fmt"
+	"github.com/joncrlsn/misc"
+	"github.com/joncrlsn/pgutil"
+	"text/template"
+	"bytes"
+	"sort"
+)
+
+var (
+	triggerSqlTemplate = initTriggerSqlTemplate()
+)
+
+// Initializes the Sql template
+func initTriggerSqlTemplate() *template.Template {
+	sql := `
+    SELECT n.nspname AS schema_name
+       , {{if eq $.DbSchema "*" }}n.nspname || '.' || {{end}}c.relname AS compare_name
+       , c.relname AS table_name
+       , t.tgname AS trigger_name
+       , pg_catalog.pg_get_triggerdef(t.oid, true) AS definition
+       , t.tgenabled AS enabled
+    FROM pg_catalog.pg_trigger t
+    INNER JOIN pg_catalog.pg_class c ON (c.oid = t.tgrelid)
+    INNER JOIN pg_catalog.pg_namespace n ON (n.oid = c.relnamespace)
+	WHERE true
+    {{if eq $.DbSchema "*" }}
+    AND n.nspname NOT LIKE 'pg_%' 
+    AND n.nspname <> 'information_schema' 
+    {{else}}
+    AND n.nspname = '{{$.DbSchema}}'
+    {{end}}
+	`
+	t := template.New("TriggerSqlTmpl")
+	template.Must(t.Parse(sql))
+	return t
+}
 
 // ==================================
 // TriggerRows definition
@@ -24,8 +57,8 @@ func (slice TriggerRows) Len() int {
 }
 
 func (slice TriggerRows) Less(i, j int) bool {
-	if slice[i]["table_name"] != slice[j]["table_name"] {
-		return slice[i]["table_name"] < slice[j]["table_name"]
+	if slice[i]["compare_name"] != slice[j]["compare_name"] {
+		return slice[i]["compare_name"] < slice[j]["compare_name"]
 	}
 	return slice[i]["trigger_name"] < slice[j]["trigger_name"]
 }
@@ -69,7 +102,7 @@ func (c *TriggerSchema) Compare(obj interface{}) int {
 		return +999
 	}
 
-	val := misc.CompareStrings(c.get("table_name"), c2.get("table_name"))
+	val := misc.CompareStrings(c.get("compare_name"), c2.get("compare_name"))
 	if val != 0 {
 		return val
 	}
@@ -79,12 +112,20 @@ func (c *TriggerSchema) Compare(obj interface{}) int {
 
 // Add returns SQL to create the trigger
 func (c TriggerSchema) Add() {
+	schema := dbInfo2.DbSchema
+	if schema == "*" {
+		schema = c.get("schema_name")
+	}
+
+	// NOTE: we may need to do some tweaking of the definition here to replace the old schema
+	// name with the new schema name.
+
 	fmt.Printf("%s;\n", c.get("definition"))
 }
 
 // Drop returns SQL to drop the trigger
 func (c TriggerSchema) Drop() {
-	fmt.Printf("DROP TRIGGER %s ON %s;\n", c.get("trigger_name"), c.get("table_name"))
+	fmt.Printf("DROP TRIGGER %s ON %s.%s;\n", c.get("trigger_name"), c.get("schema_name"), c.get("table_name"))
 }
 
 // Change handles the case where the trigger names match, but the definition does not
@@ -104,18 +145,15 @@ func (c TriggerSchema) Change(obj interface{}) {
 
 // compareTriggers outputs SQL to make the triggers match between DBs
 func compareTriggers(conn1 *sql.DB, conn2 *sql.DB) {
-	sql := `
-    SELECT n.nspname || '.' || c.relname AS table_name
-       , t.tgname AS trigger_name
-       , pg_catalog.pg_get_triggerdef(t.oid, true) AS definition
-       , t.tgenabled AS enabled
-    FROM pg_catalog.pg_trigger t
-    INNER JOIN pg_catalog.pg_class c ON (c.oid = t.tgrelid)
-    INNER JOIN pg_catalog.pg_namespace n ON (n.oid = c.relnamespace AND n.nspname NOT LIKE 'pg_%');
-	`
 
-	rowChan1, _ := pgutil.QueryStrings(conn1, sql)
-	rowChan2, _ := pgutil.QueryStrings(conn2, sql)
+	buf1 := new(bytes.Buffer)
+	triggerSqlTemplate.Execute(buf1, dbInfo1)
+
+	buf2 := new(bytes.Buffer)
+	triggerSqlTemplate.Execute(buf2, dbInfo2)
+
+	rowChan1, _ := pgutil.QueryStrings(conn1, buf1.String())
+	rowChan2, _ := pgutil.QueryStrings(conn2, buf2.String())
 
 	rows1 := make(TriggerRows, 0)
 	for row := range rowChan1 {

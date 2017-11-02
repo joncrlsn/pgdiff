@@ -23,9 +23,9 @@ var (
 // Initializes the Sql template
 func initSequenceSqlTemplate() *template.Template {
 	sql := `
-SELECT sequence_schema,
+SELECT sequence_schema AS schema_name
     , {{if eq $.DbSchema "*" }}sequence_schema || '.' || {{end}}sequence_name AS compare_name
-    ,  sequence_name AS sequence_name
+    , sequence_name 
 	, data_type
 	, start_value
 	, minimum_value
@@ -66,7 +66,7 @@ func (slice SequenceRows) Swap(i, j int) {
 	slice[i], slice[j] = slice[j], slice[i]
 }
 
-// SequenceSchema holds a channel streaming table information from one of the databases as well as
+// SequenceSchema holds a channel streaming sequence information from one of the databases as well as
 // a reference to the current row of data we're viewing.
 //
 // SequenceSchema implements the Schema interface defined in pgdiff.go
@@ -109,14 +109,14 @@ func (c *SequenceSchema) Compare(obj interface{}) int {
 func (c SequenceSchema) Add() {
 	schema := dbInfo2.DbSchema
 	if schema == "*" {
-		schema = c.get("sequence_schema")
+		schema = c.get("schema_name")
 	}
 	fmt.Printf("CREATE SEQUENCE %s.%s INCREMENT %s MINVALUE %s MAXVALUE %s START %s;\n", schema, c.get("sequence_name"), c.get("increment"), c.get("minimum_value"), c.get("maximum_value"), c.get("start_value"))
 }
 
 // Drop returns SQL to drop the sequence
 func (c SequenceSchema) Drop() {
-	fmt.Printf("DROP SEQUENCE %s.%s;\n", c.get("sequence_schema"), c.get("sequence_name"))
+	fmt.Printf("DROP SEQUENCE %s.%s;\n", c.get("schema_name"), c.get("sequence_name"))
 }
 
 // Change doesn't do anything right now.
@@ -128,7 +128,7 @@ func (c SequenceSchema) Change(obj interface{}) {
 	// Don't know of anything helpful we should do here
 }
 
-// compareSequences outputs SQL to make the sequences match between DBs
+// compareSequences outputs SQL to make the sequences match between DBs or schemas
 func compareSequences(conn1 *sql.DB, conn2 *sql.DB) {
 
 	buf1 := new(bytes.Buffer)

@@ -292,6 +292,6 @@ func compareIndexes(conn1 *sql.DB, conn2 *sql.DB) {
 	var schema1 Schema = &IndexSchema{rows: rows1, rowNum: -1}
 	var schema2 Schema = &IndexSchema{rows: rows2, rowNum: -1}
 
-	// Compare the columns
+	// Compare the indexes
 	doDiff(schema1, schema2)
 }

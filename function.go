@@ -6,11 +6,44 @@
 
 package main
 
-import "fmt"
-import "sort"
-import "database/sql"
-import "github.com/joncrlsn/pgutil"
-import "github.com/joncrlsn/misc"
+import (
+ "fmt"
+ "sort"
+ "database/sql"
+ "github.com/joncrlsn/pgutil"
+ "github.com/joncrlsn/misc"
+ "text/template"
+ "bytes"
+)
+
+var (
+	functionSqlTemplate = initFunctionSqlTemplate()
+)
+
+// Initializes the Sql template
+func initFunctionSqlTemplate() *template.Template {
+	sql := `
+    SELECT n.nspname                 AS schema_name
+        , {{if eq $.DbSchema "*" }}n.nspname || '.' || {{end}}p.oid::regprocedure AS compare_name
+        , p.oid::regprocedure        AS function_name
+        , t.typname                  AS return_type
+        , pg_get_functiondef(p.oid)  AS definition
+    FROM pg_proc AS p
+    JOIN pg_type t ON (p.prorettype = t.oid)
+    JOIN pg_namespace n ON (n.oid = p.pronamespace)
+    JOIN pg_language l ON (p.prolang = l.oid AND l.lanname IN ('c','plpgsql', 'sql'))
+    WHERE true
+	{{if eq $.DbSchema "*" }}
+    AND n.nspname NOT LIKE 'pg_%' 
+    AND n.nspname <> 'information_schema' 
+    {{else}}
+    AND n.nspname = '{{$.DbSchema}}'
+    {{end}};
+	`
+	t := template.New("FunctionSqlTmpl")
+	template.Must(t.Parse(sql))
+	return t
+}
 
 // ==================================
 // FunctionRows definition
@@ -74,7 +107,7 @@ func (c *FunctionSchema) Compare(obj interface{}) int {
 // Add returns SQL to create the function
 func (c FunctionSchema) Add() {
 	fmt.Println("-- STATEMENT-BEGIN")
-	fmt.Println(c.get("definition"))
+	fmt.Printf("%s;\n", c.get("definition"))
 	fmt.Println("-- STATEMENT-END")
 }
 
@@ -96,26 +129,22 @@ func (c FunctionSchema) Change(obj interface{}) {
 		fmt.Println("-- This function is different so we'll recreate it:")
 		// The definition column has everything needed to rebuild the function
 		fmt.Println("-- STATEMENT-BEGIN")
-		fmt.Println(c.get("definition"))
+		fmt.Printf("%s;\n", c.get("definition"))
 		fmt.Println("-- STATEMENT-END")
 	}
 }
 
 // compareFunctions outputs SQL to make the functions match between DBs
 func compareFunctions(conn1 *sql.DB, conn2 *sql.DB) {
-	sql := `
-    SELECT n.nspname || '.' || p.oid::regprocedure   AS function_name
-        , t.typname                                  AS return_type
-        , pg_get_functiondef(p.oid)                  AS definition
-    FROM pg_proc AS p
-    JOIN pg_type t ON (p.prorettype = t.oid)
-    JOIN pg_namespace n ON (n.oid = p.pronamespace)
-    JOIN pg_language l ON (p.prolang = l.oid AND l.lanname IN ('c','plpgsql', 'sql'))
-    WHERE n.nspname NOT LIKE 'pg_%';
-	`
 
-	rowChan1, _ := pgutil.QueryStrings(conn1, sql)
-	rowChan2, _ := pgutil.QueryStrings(conn2, sql)
+	buf1 := new(bytes.Buffer)
+	functionSqlTemplate.Execute(buf1, dbInfo1)
+
+	buf2 := new(bytes.Buffer)
+	functionSqlTemplate.Execute(buf2, dbInfo2)
+
+	rowChan1, _ := pgutil.QueryStrings(conn1, buf1.String())
+	rowChan2, _ := pgutil.QueryStrings(conn2, buf2.String())
 
 	rows1 := make(FunctionRows, 0)
 	for row := range rowChan1 {

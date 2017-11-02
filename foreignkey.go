@@ -175,6 +175,6 @@ func compareForeignKeys(conn1 *sql.DB, conn2 *sql.DB) {
 	var schema1 Schema = &ForeignKeySchema{rows: rows1, rowNum: -1}
 	var schema2 Schema = &ForeignKeySchema{rows: rows2, rowNum: -1}
 
-	// Compare the columns
+	// Compare the foreign keys
 	doDiff(schema1, schema2)
 }

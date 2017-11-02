@@ -21,12 +21,12 @@ SELECT sequence_schema,
 	, minimum_value
 	, maximum_value
 	, increment
-	, cycle_option 
+	, cycle_option
 FROM information_schema.sequences
 WHERE true
 {{if eq $.DbSchema "*" }}
-AND sequence_schema NOT LIKE 'pg_%' 
-AND sequence_schema <> 'information_schema' 
+AND sequence_schema NOT LIKE 'pg_%'
+AND sequence_schema <> 'information_schema'
 {{else}}
 AND sequence_schema = '{{$.DbSchema}}'
 {{end}}
@@ -34,17 +34,17 @@ AND sequence_schema = '{{$.DbSchema}}'
 
 // Note that these must be sorted by schema and sequence name for this to work
 var testSequences1a = []map[string]string{
-	{"compare_name":"s1.add",  "sequence_schema":"s1", "sequence_name":"s1_add"},
-	{"compare_name":"s1.same", "sequence_schema":"s1", "sequence_name":"same"},
-	{"compare_name":"s2.add",  "sequence_schema":"s2", "sequence_name":"s2_add"},
-	{"compare_name":"s2.same", "sequence_schema":"s2", "sequence_name":"same"},
+	{"compare_name": "s1.add", "sequence_schema": "s1", "sequence_name": "s1_add"},
+	{"compare_name": "s1.same", "sequence_schema": "s1", "sequence_name": "same"},
+	{"compare_name": "s2.add", "sequence_schema": "s2", "sequence_name": "s2_add"},
+	{"compare_name": "s2.same", "sequence_schema": "s2", "sequence_name": "same"},
 }
 
 // Note that these must be sorted by schema and sequence name for this to work
 var testSequences1b = []map[string]string{
 	{"compare_name": "s1.delete", "sequence_schema": "s1", "sequence_name": "delete"},
-	{"compare_name": "s1.same",   "sequence_schema": "s1", "sequence_name": "same"},
-	{"compare_name": "s2.same",   "sequence_schema": "s2", "sequence_name": "same"},
+	{"compare_name": "s1.same", "sequence_schema": "s1", "sequence_name": "same"},
+	{"compare_name": "s2.same", "sequence_schema": "s2", "sequence_name": "same"},
 }
 
 func Test_diffSequencesAllSchemas(t *testing.T) {
@@ -60,14 +60,14 @@ func Test_diffSequencesAllSchemas(t *testing.T) {
 
 // Note that these must be sorted by compare_name (witout schema) for this to work
 var testSequences2a = []map[string]string{
-	{"compare_name": "add",  "sequence_schema": "s1", "sequence_name": "add"},
+	{"compare_name": "add", "sequence_schema": "s1", "sequence_name": "add"},
 	{"compare_name": "same", "sequence_schema": "s1", "sequence_name": "same"},
 }
 
 // Note that these must be sorted by compare_name (witout schema) for this to work
 var testSequences2b = []map[string]string{
 	{"compare_name": "delete", "sequence_schema": "s2", "sequence_name": "delete"},
-	{"compare_name": "same",   "sequence_schema": "s2", "sequence_name": "same"},
+	{"compare_name": "same", "sequence_schema": "s2", "sequence_name": "same"},
 }
 
 func Test_diffSequencesBetweenSchemas(t *testing.T) {
