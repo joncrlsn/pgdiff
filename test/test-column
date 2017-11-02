@@ -6,15 +6,20 @@
 source ./start-fresh.sh >/dev/null
 
 echo
+echo ==============================================================
+
+#
+# Compare the columns in two schemas in the same database
+#
+
+echo
 echo "# Compare the tables in two schemas in the same database"
 echo "# Expect SQL:"
 echo "#   Add s2.table1.id"
 echo "#   Drop s2.table1.description"
 echo "#   Alter s2.table1.name to varchar(24)"
+echo
 
-#
-# Compare the columns in two schemas in the same database
-#
 ./populate-db.sh db1 "
     CREATE SCHEMA s1;
     CREATE TABLE s1.table1 (
@@ -31,7 +36,6 @@ echo "#   Alter s2.table1.name to varchar(24)"
 " 
 
 echo
-echo "SQL to run:"
 ../pgdiff -U "u1" -W "asdf" -H "localhost" -D "db1" -S "s1" -O "sslmode=disable" \
           -u "u1" -w "asdf" -h "localhost" -d "db1" -s "s2" -o "sslmode=disable" \
           COLUMN | grep -v '^-- '
@@ -40,14 +44,15 @@ echo
 echo ==============================================================
 echo
 
+#
+# Compare the columns in all schemas between two database
+#
+
 echo "# Compare the columns in all schemas in two databases"
 echo "# Expect SQL:"
 echo "#   Drop column_to_delete from s1.table1 (in db2)"
 echo "#   Add s1.table1.name  (in db2) "
 echo "#   Alter s2.table1.name to varchar(24)"
-#
-# Compare the columns in all schemas in two database
-#
 ./populate-db.sh db2 "
     CREATE SCHEMA s1;
     CREATE TABLE s1.table1 (
@@ -64,7 +69,7 @@ echo "#   Alter s2.table1.name to varchar(24)"
 "
 
 echo
-echo "SQL to run:"
 ../pgdiff -U "u1" -W "asdf" -H "localhost" -D "db1" -S "*" -O "sslmode=disable" \
           -u "u1" -w "asdf" -h "localhost" -d "db2" -s "*" -o "sslmode=disable" \
           COLUMN | grep -v '^-- '
+echo

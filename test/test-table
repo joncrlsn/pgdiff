@@ -6,6 +6,9 @@
 source ./start-fresh.sh >/dev/null 
 
 echo
+echo ==============================================================
+
+echo
 echo "# Compare the tables in two schemas in the same database"
 echo "# Expect SQL:"
 echo "#   Add table9 to schema s2"
@@ -59,3 +62,4 @@ echo "SQL to run:"
 ../pgdiff -U "u1" -W "asdf" -H "localhost" -D "db1" -S "*" -O "sslmode=disable" \
           -u "u1" -w "asdf" -h "localhost" -d "db2" -s "*" -o "sslmode=disable" \
           TABLE | grep -v '^-- '
+echo
