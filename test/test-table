@@ -9,13 +9,13 @@ echo
 echo ==============================================================
 
 echo
-echo "# Compare the tables in two schemas in the same database"
+echo "# Compare the tables between two schemas in the same database"
 echo "# Expect SQL:"
 echo "#   Add table9 to schema s2"
 echo "#   Drop table11 from schema s2"
 
 #
-# Compare the tables in two schemas in the same database
+# Compare the tables between two schemas in the same database
 #
 #psql -U u1 -h localhost -d db1 <<'EOS'
 ./populate-db.sh db1 "
@@ -38,7 +38,7 @@ echo
 echo ==============================================================
 
 echo
-echo "# Compare the tables in all schemas in two databases"
+echo "# Compare the tables in all schemas between two databases"
 echo "# Expect:"
 echo "#   Add s1.table10 to db2"
 echo "#   Drop s2.table12 from db2"

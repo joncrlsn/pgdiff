@@ -9,11 +9,11 @@ echo
 echo ==============================================================
 
 #
-# Compare the columns in two schemas in the same database
+# Compare the columns between two schemas in the same database
 #
 
 echo
-echo "# Compare the tables in two schemas in the same database"
+echo "# Compare the tables between two schemas in the same database"
 echo "# Expect SQL:"
 echo "#   Add s2.table1.id"
 echo "#   Drop s2.table1.description"
@@ -45,10 +45,10 @@ echo ==============================================================
 echo
 
 #
-# Compare the columns in all schemas between two database
+# Compare the columns in all schemas between two databases
 #
 
-echo "# Compare the columns in all schemas in two databases"
+echo "# Compare the columns in all schemas between two databases"
 echo "# Expect SQL:"
 echo "#   Drop column_to_delete from s1.table1 (in db2)"
 echo "#   Add s1.table1.name  (in db2) "

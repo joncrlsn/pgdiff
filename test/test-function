@@ -61,7 +61,7 @@ echo
 
 
 #
-# Compare the functions in all schemas in two databases
+# Compare the functions in all schemas between two databases
 #
 ./populate-db.sh db2 "
     CREATE SCHEMA s1;

@@ -10,7 +10,7 @@ echo ====================================================
 echo
 
 #
-# Compare the foreign keys in two schemas in the same database
+# Compare the foreign keys between two schemas in the same database
 #
 
 ./populate-db.sh db1 "
@@ -42,7 +42,7 @@ echo
 "
 
 echo
-echo "# Compare the foreign keys in two schemas in the same database"
+echo "# Compare the foreign keys between two schemas in the same database"
 echo "# Expect SQL:"
 echo "#   Add foreign key on s2.table2.table1_id"
 echo "#   Drop foreign key from s2.table3.table2_id"
@@ -58,7 +58,7 @@ echo
 
 
 #
-# Compare the foreign keys in all schemas in two databases
+# Compare the foreign keys in all schemas between two databases
 #
 ./populate-db.sh db2 "
     CREATE SCHEMA s1;

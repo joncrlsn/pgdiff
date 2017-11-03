@@ -9,7 +9,7 @@ echo ==========================================================
 echo
 
 #
-# Compare the sequences in two schemas in the same database
+# Compare the sequences between two schemas in the same database
 #
 
 ./populate-db.sh db1 "
@@ -30,7 +30,7 @@ echo
 "
 
 echo
-echo "# Compare the sequences in two schemas in the same database"
+echo "# Compare the sequences between two schemas in the same database"
 echo "# Expect SQL (pseudocode):"
 echo "#   Add s2.sequence_1"
 echo "#   Drop s2.sequence_3"
@@ -46,7 +46,7 @@ echo ==========================================================
 echo
 
 #
-# Compare the sequences in all schemas in two databases
+# Compare the sequences in all schemas between two databases
 #
 ./populate-db.sh db2 "
     CREATE SCHEMA s1;

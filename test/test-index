@@ -9,7 +9,7 @@ echo ==========================================================
 echo
 
 #
-# Compare the indexes in two schemas in the same database
+# Compare the indexes between two schemas in the same database
 #
 
 ./populate-db.sh db1 "
@@ -31,7 +31,7 @@ echo
 "
 
 echo
-echo "# Compare the indexes in two schemas in the same database"
+echo "# Compare the indexes between two schemas in the same database"
 echo "# Expect SQL (pseudocode):"
 echo "#   Add index on s2.table1.name"
 echo "#   Drop index on s2.table1.url"
@@ -46,7 +46,7 @@ echo
 
 
 #
-# Compare the indexes in all schemas in two databases
+# Compare the indexes in all schemas between two databases
 #
 ./populate-db.sh db2 "
     CREATE SCHEMA s1;
