@@ -26,7 +26,7 @@ var (
 func initColumnSqlTemplate() *template.Template {
 	sql := `
 SELECT table_schema
-    , {{if eq $.DbSchema "*" }}table_schema || '.' || {{end}}table_name AS compare_name
+    , {{if eq $.DbSchema "*" }}table_schema || '.' || {{end}}table_name || '.' || column_name  AS compare_name
 	, table_name
     , column_name
     , data_type
@@ -41,7 +41,7 @@ AND table_schema <> 'information_schema'
 {{else}}
 AND table_schema = '{{$.DbSchema}}'
 {{end}}
-ORDER BY compare_name, column_name;
+ORDER BY compare_name ASC;
 `
 	t := template.New("ColumnSqlTmpl")
 	template.Must(t.Parse(sql))
@@ -60,10 +60,7 @@ func (slice ColumnRows) Len() int {
 }
 
 func (slice ColumnRows) Less(i, j int) bool {
-	if slice[i]["compare_name"] != slice[j]["compare_name"] {
-		return slice[i]["column_name"] < slice[j]["compare_name"]
-	}
-	return slice[i]["column_name"] < slice[j]["column_name"]
+	return slice[i]["compare_name"] < slice[j]["compare_name"]
 }
 
 func (slice ColumnRows) Swap(i, j int) {
@@ -108,13 +105,6 @@ func (c *ColumnSchema) Compare(obj interface{}) int {
 	}
 
 	val := misc.CompareStrings(c.get("compare_name"), c2.get("compare_name"))
-	if val != 0 {
-		// Table name differed so return that value
-		return val
-	}
-
-	// Table name was the same so compare column name
-	val = misc.CompareStrings(c.get("column_name"), c2.get("column_name"))
 	return val
 }
 

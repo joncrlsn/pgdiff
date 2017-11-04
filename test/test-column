@@ -3,7 +3,7 @@
 # Useful for visually inspecting the output SQL to verify it is doing what it should
 #
 
-source ./start-fresh.sh >/dev/null
+source ./start-fresh.sh >/dev/null 
 
 echo
 echo ==============================================================
@@ -11,64 +11,65 @@ echo ==============================================================
 #
 # Compare the columns between two schemas in the same database
 #
-
-echo
-echo "# Compare the tables between two schemas in the same database"
-echo "# Expect SQL:"
-echo "#   Add s2.table1.id"
-echo "#   Drop s2.table1.description"
-echo "#   Alter s2.table1.name to varchar(24)"
-echo
-
+#psql -U u1 -h localhost -d db1 <<'EOS'
 ./populate-db.sh db1 "
     CREATE SCHEMA s1;
-    CREATE TABLE s1.table1 (
-      id integer, 
-      name varchar(24) 
+    CREATE TABLE s1.table9 (
+        id integer,
+        name varchar(50)
     );
-
+    CREATE TABLE s1.table10 (id bigint);
+    CREATE TABLE s1.table11 ();
+    
     CREATE SCHEMA s2;
-    CREATE TABLE s2.table1(
-                              -- id will be added to s2
-      name varchar(12),       -- name will grow to 24 in s2
-      description varchar(24) -- description will be dropped in s2
-    );
-" 
+    CREATE TABLE s2.table9 (  -- Add name column 
+        id integer
+    ); 
+    CREATE TABLE s2.table10 (id integer); -- change id to bigint
+    CREATE TABLE s2.table11 (id integer); -- drop id column
+"
+
+echo
+echo "# Compare the columns between two schemas in the same database"
+echo "# Expect SQL:"
+echo "#   Add s2.table9.name"
+echo "#   Change s2.table10.id to bigint"
+echo "#   Drop s2.table11.id"
 
 echo
 ../pgdiff -U "u1" -W "asdf" -H "localhost" -D "db1" -S "s1" -O "sslmode=disable" \
           -u "u1" -w "asdf" -h "localhost" -d "db1" -s "s2" -o "sslmode=disable" \
           COLUMN | grep -v '^-- '
 
+
 echo
 echo ==============================================================
-echo
 
-#
-# Compare the columns in all schemas between two databases
-#
-
-echo "# Compare the columns in all schemas between two databases"
-echo "# Expect SQL:"
-echo "#   Drop column_to_delete from s1.table1 (in db2)"
-echo "#   Add s1.table1.name  (in db2) "
-echo "#   Alter s2.table1.name to varchar(24)"
 ./populate-db.sh db2 "
     CREATE SCHEMA s1;
-    CREATE TABLE s1.table1 (
-      id integer, 
-                                -- Name will be added
-      column_to_delete integer  -- This will be deleted
+    CREATE TABLE s1.table9 (
+        id integer,
+        name varchar(40)
     );
-
+    CREATE TABLE s1.table10 ();
+    CREATE TABLE s1.table11 (dropme integer);
+    
     CREATE SCHEMA s2;
-    CREATE TABLE s2.table1(
-      name varchar(24),       -- name will change to varchar(12)
-      description varchar(24) -- description will be dropped in s2
-    );
+    CREATE TABLE s2.table9 (  -- Add name column 
+        id integer
+    ); 
+    CREATE TABLE s2.table10 (id integer); -- change id to bigint
+    CREATE TABLE s2.table11 (id integer); -- drop id column
 "
 
 echo
+echo "# Compare the columns in all schemas between two databases"
+echo "# Expect:"
+echo "#   Change s1.table9.name to varchar(50) "
+echo "#   Add s1.table10.id"
+echo "#   Drop s1.table11.dropme"
+echo
+
 ../pgdiff -U "u1" -W "asdf" -H "localhost" -D "db1" -S "*" -O "sslmode=disable" \
           -u "u1" -w "asdf" -h "localhost" -d "db2" -s "*" -o "sslmode=disable" \
           COLUMN | grep -v '^-- '
