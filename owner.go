@@ -6,11 +6,47 @@
 
 package main
 
-import "fmt"
-import "database/sql"
-import "sort"
-import "github.com/joncrlsn/pgutil"
-import "github.com/joncrlsn/misc"
+import (
+	"bytes"
+	"database/sql"
+	"fmt"
+	"github.com/joncrlsn/misc"
+	"github.com/joncrlsn/pgutil"
+	"sort"
+	"text/template"
+)
+
+var (
+	ownerSqlTemplate = initOwnerSqlTemplate()
+)
+
+// Initializes the Sql template
+func initOwnerSqlTemplate() *template.Template {
+	sql := `
+SELECT n.nspname AS schema_name
+    , {{if eq $.DbSchema "*" }}n.nspname || '.' || {{end}}c.relname || '.' || c.relname AS compare_name
+    , c.relname AS relationship_name
+    , a.rolname AS owner
+    , CASE WHEN c.relkind = 'r' THEN 'TABLE' 
+        WHEN c.relkind = 'S' THEN 'SEQUENCE' 
+        WHEN c.relkind = 'v' THEN 'VIEW' 
+        ELSE c.relkind::varchar END AS type
+FROM pg_class AS c
+INNER JOIN pg_authid AS a ON (a.oid = c.relowner)
+INNER JOIN pg_namespace AS n ON (n.oid = c.relnamespace)
+WHERE c.relkind IN ('r', 'S', 'v')
+{{if eq $.DbSchema "*"}}
+AND n.nspname NOT LIKE 'pg_%' 
+AND n.nspname <> 'information_schema'
+{{else}}
+AND n.nspname = '{{$.DbSchema}}'
+{{end}}
+;`
+
+	t := template.New("OwnerSqlTmpl")
+	template.Must(t.Parse(sql))
+	return t
+}
 
 // ==================================
 // OwnerRows definition
@@ -24,7 +60,7 @@ func (slice OwnerRows) Len() int {
 }
 
 func (slice OwnerRows) Less(i, j int) bool {
-	return slice[i]["relationship_name"] < slice[j]["relationship_name"]
+	return slice[i]["compare_name"] < slice[j]["compare_name"]
 }
 
 func (slice OwnerRows) Swap(i, j int) {
@@ -77,21 +113,21 @@ func (c *OwnerSchema) Compare(obj interface{}) int {
 		return +999
 	}
 
-	val := misc.CompareStrings(c.get("relationship_name"), c2.get("relationship_name"))
+	val := misc.CompareStrings(c.get("compare_name"), c2.get("compare_name"))
 	return val
 }
 
 // Add generates SQL to add the table/view owner
 func (c OwnerSchema) Add() {
-	fmt.Printf("-- Notice, db2 has no %s named %s. You probably need to run pgdiff with the %s option first.\n", c.get("type"), c.get("relationship_name"), c.get("type"))
+	fmt.Printf("-- Notice!, db2 has no %s named %s.  First, run pgdiff with the %s option.\n", c.get("type"), c.get("relationship_name"), c.get("type"))
 }
 
 // Drop generates SQL to drop the owner
 func (c OwnerSchema) Drop() {
-	fmt.Printf("-- Notice, db2 has a %s that db1 does not: %s. Cannot compare owners.\n", c.get("type"), c.get("relationship_name"))
+	fmt.Printf("-- Notice!, db2 has a %s that db1 does not: %s.   First, run pgdiff with the %s option.\n", c.get("type"), c.get("relationship_name"), c.get("type"))
 }
 
-// Change handles the case where the role name matches, but the details do not
+// Change handles the case where the relationship name matches, but the owner does not
 func (c OwnerSchema) Change(obj interface{}) {
 	c2, ok := obj.(*OwnerSchema)
 	if !ok {
@@ -99,30 +135,23 @@ func (c OwnerSchema) Change(obj interface{}) {
 	}
 
 	if c.get("owner") != c2.get("owner") {
-		fmt.Printf("ALTER %s %s OWNER TO %s; \n", c.get("type"), c.get("relationship_name"), c.get("owner"))
+		fmt.Printf("ALTER %s %s.%s OWNER TO %s; \n", c.get("type"), c2.get("schema_name"), c.get("relationship_name"), c.get("owner"))
 	}
 }
 
 /*
- * Compare the ownership of tables, sequences, and views in the two databases
+ * Compare the ownership of tables, sequences, and views between two databases or schemas
  */
 func compareOwners(conn1 *sql.DB, conn2 *sql.DB) {
-	sql := `
-SELECT n.nspname AS schema
-    , c.relname AS relationship_name
-    , a.rolname AS owner
-    , CASE WHEN c.relkind = 'r' THEN 'TABLE' 
-        WHEN c.relkind = 'S' THEN 'SEQUENCE' 
-        WHEN c.relkind = 'v' THEN 'VIEW' 
-        ELSE c.relkind::varchar END AS type
-FROM pg_class AS c
-INNER JOIN pg_authid AS a ON (a.oid = c.relowner)
-INNER JOIN pg_namespace AS n ON (n.oid = c.relnamespace)
-WHERE n.nspname = 'public' 
-AND c.relkind IN ('r', 'S', 'v');
-`
-	rowChan1, _ := pgutil.QueryStrings(conn1, sql)
-	rowChan2, _ := pgutil.QueryStrings(conn2, sql)
+
+	buf1 := new(bytes.Buffer)
+	ownerSqlTemplate.Execute(buf1, dbInfo1)
+
+	buf2 := new(bytes.Buffer)
+	ownerSqlTemplate.Execute(buf2, dbInfo2)
+
+	rowChan1, _ := pgutil.QueryStrings(conn1, buf1.String())
+	rowChan2, _ := pgutil.QueryStrings(conn2, buf2.String())
 
 	rows1 := make(OwnerRows, 0)
 	for row := range rowChan1 {

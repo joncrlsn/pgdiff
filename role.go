@@ -266,7 +266,7 @@ func (c RoleSchema) Change(obj interface{}) {
 }
 
 /*
- * Compare the roles in the two databases
+ * Compare the roles between two databases or schemas
  */
 func compareRoles(conn1 *sql.DB, conn2 *sql.DB) {
 	sql := `

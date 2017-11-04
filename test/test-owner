@@ -1,0 +1,90 @@
+#!/bin/bash
+#
+# Useful for visually inspecting the output SQL to verify it is doing what it should
+#
+
+# Rebuild the basic databases
+source ./start-fresh.sh >/dev/null
+
+# An additional user/role is needed for this test
+sudo su - postgres -- -c " 
+  psql -c \" 
+    DROP USER IF EXISTS u2; CREATE USER u2 WITH SUPERUSER PASSWORD 'asdf'; 
+  \"
+"
+
+
+echo
+echo ==========================================================
+echo
+
+#
+# Compare the table, etc owners between two schemas in the same database
+#
+
+./populate-db.sh db1 "
+    -- schema s1
+    CREATE SCHEMA s1;
+    CREATE TABLE s1.table1(); 
+    ALTER TABLE s1.table1 OWNER TO u2;
+    CREATE TABLE s1.table2(); 
+    CREATE TABLE s1.table3(); 
+    CREATE TABLE s1.table4(); 
+
+    -- schema s2
+    CREATE SCHEMA s2;
+    CREATE TABLE s2.table1();
+    CREATE TABLE s2.table2();
+    ALTER TABLE s2.table2 OWNER TO u2;
+    CREATE TABLE s2.table3();
+    CREATE TABLE s2.table5(); 
+"
+
+echo
+echo "# Compare the table, etc. owners between two schemas in the same database"
+echo "# Expect SQL (pseudocode):"
+echo "#   Change s2.table1 owner to u2"
+echo "#   Change s2.table2 owner to u1"
+echo "#   No changes to ownership of s2.table3"
+echo "#   Messages about table4 and table5 not being in both schemas"
+echo
+
+../pgdiff -U "u1" -W "asdf" -H "localhost" -D "db1" -S "s1" -O "sslmode=disable" \
+          -u "u1" -w "asdf" -h "localhost" -d "db1" -s "s2" -o "sslmode=disable" \
+          OWNER #| grep -v '^-- '
+echo
+echo ==========================================================
+echo
+
+
+#
+# Compare the table, etc. owners in all schemas between two databases
+#
+./populate-db.sh db2 "
+    -- schema s1
+    CREATE SCHEMA s1;
+    CREATE TABLE s1.table1(); 
+    ALTER TABLE s1.table1 OWNER TO u2;
+    CREATE TABLE s1.table2(); 
+    CREATE TABLE s1.table3(); 
+    ALTER TABLE s1.table3 OWNER TO u2;
+
+    -- schema s2
+    CREATE SCHEMA s2;
+    CREATE TABLE s2.table1();
+    CREATE TABLE s2.table2();
+    CREATE TABLE s2.table3();
+"
+
+echo
+echo "# Compare the table, etc owners in all schemas between two databases"
+echo "# Expect SQL (pseudocode):"
+echo "#   Change s1.table3 owner to u1 "
+echo "#   Change s2.table2 owner to u2 "
+echo
+
+../pgdiff -U "u1" -W "asdf" -H "localhost" -D "db1" -S "*" -O "sslmode=disable" \
+          -u "u1" -w "asdf" -h "localhost" -d "db2" -s "*" -o "sslmode=disable" \
+          OWNER | grep -v '^-- '
+echo
+echo

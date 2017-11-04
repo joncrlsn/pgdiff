@@ -7,13 +7,13 @@
 package main
 
 import (
- "fmt"
- "sort"
- "database/sql"
- "github.com/joncrlsn/pgutil"
- "github.com/joncrlsn/misc"
- "text/template"
- "bytes"
+	"bytes"
+	"database/sql"
+	"fmt"
+	"github.com/joncrlsn/misc"
+	"github.com/joncrlsn/pgutil"
+	"sort"
+	"text/template"
 )
 
 var (
