@@ -16,26 +16,25 @@ pgdiff is written to be easy to expand and improve the accuracy of the diff.
 
 (where options and &lt;schemaType&gt; are listed below)
 
-I have found that there is an ideal order for running the different schema types.  This order should minimize the problems you encounter.  For example, you will always want to add new tables before you add new columns.  This is the order that has worked for me, however "your mileage may vary".
+I have found that there is an ideal order for running the different schema types.  This order should minimize the problems you encounter.  For example, you will always want to add new tables before you add new columns.  This is the order that has worked for me.
 
 In addition, some types can have dependencies which are not in the right order.  A classic case is views which depend on other views.  The missing view SQL is generated in alphabetical order so if a view create fails due to a missing view, just run the views SQL file over again. The pgdiff.sh script will prompt you about running it again.
  
 Schema type ordering:
 
-1. ROLE
-1. FUNCTION
-1. SEQUENCE
 1. SCHEMA
+1. ROLE
 1. SEQUENCE
 1. TABLE
 1. COLUMN
 1. INDEX
 1. VIEW
-1. OWNER
 1. FOREIGN\_KEY
+1. FUNCTION
+1. TRIGGER
+1. OWNER
 1. GRANT\_RELATIONSHIP
 1. GRANT\_ATTRIBUTE
-1. TRIGGER
 
 
 ### example

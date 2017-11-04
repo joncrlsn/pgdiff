@@ -1,0 +1,85 @@
+#!/bin/bash
+#
+# Useful for visually inspecting the output SQL to verify it is doing what it should
+#
+
+source ./start-fresh.sh >/dev/null
+echo
+echo ==========================================================
+echo
+
+#
+# Compare the triggers between two schemas in the same database
+#
+
+#CREATE [ CONSTRAINT ] TRIGGER name { BEFORE | AFTER | INSTEAD OF } { event [ OR ... ] }
+#    ON table_name
+#    [ FROM referenced_table_name ]
+#    [ NOT DEFERRABLE | [ DEFERRABLE ] { INITIALLY IMMEDIATE | INITIALLY DEFERRED } ]
+#    [ FOR [ EACH ] { ROW | STATEMENT } ]
+#    [ WHEN ( condition ) ]
+#    EXECUTE PROCEDURE function_name ( arguments )
+
+./populate-db.sh db1 "$(cat << 'EOF'
+-- Schema s1
+CREATE SCHEMA s1;
+CREATE TABLE s1.table1 (
+  id integer,
+  name varchar(32)
+);
+CREATE OR REPLACE FUNCTION s1.validate1() RETURNS TRIGGER AS $$
+    BEGIN
+            SELECT 1; -- look like we are doing something ;^>
+    END;
+$$ LANGUAGE plpgsql;
+CREATE TRIGGER trigger1 AFTER INSERT ON s1.table1 FOR EACH ROW EXECUTE PROCEDURE s1.validate1();
+
+
+-- Schema s2
+CREATE SCHEMA s2;
+CREATE TABLE s2.table1 (
+    id integer,
+    name varchar(32)
+);
+CREATE TRIGGER trigger2 AFTER INSERT ON s2.table1 FOR EACH ROW EXECUTE PROCEDURE s1.validate1();
+
+EOF
+)"
+
+echo
+echo "# Compare the triggers between two schemas in the same database"
+echo "# Expect SQL (pseudocode):"
+echo "#   Create trigger s2.trigger1"
+echo "#   Drop trigger   s2.trigger2"
+echo
+
+../pgdiff -U "u1" -W "asdf" -H "localhost" -D "db1" -S "s1" -O "sslmode=disable" \
+          -u "u1" -w "asdf" -h "localhost" -d "db1" -s "s2" -o "sslmode=disable" \
+          TRIGGER | grep -v '^-- '
+exit 0
+
+
+echo
+echo ==========================================================
+echo
+
+#
+# Compare the triggers in all schemas between two databases
+#
+./populate-db.sh db2 "
+
+
+"
+
+echo
+echo "# Compare the triggers in all schemas between two databases"
+echo "# Expect SQL (pseudocode):"
+echo "#   Drop index on db2 s1.table1.url"
+echo "#   Add index on db2 s2.table1.url"
+echo
+
+../pgdiff -U "u1" -W "asdf" -H "localhost" -D "db1" -S "*" -O "sslmode=disable" \
+          -u "u1" -w "asdf" -h "localhost" -d "db2" -s "*" -o "sslmode=disable" \
+          TRIGGER | grep -v '^-- '
+echo
+echo

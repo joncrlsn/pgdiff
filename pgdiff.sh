@@ -77,11 +77,11 @@ rundiff TABLE
 rundiff COLUMN
 rundiff INDEX
 rundiff VIEW
+rundiff TRIGGER
 rundiff OWNER
 rundiff FOREIGN_KEY
 rundiff GRANT_RELATIONSHIP
 rundiff GRANT_ATTRIBUTE
-rundiff TRIGGER
 
 echo
 echo "Done!"

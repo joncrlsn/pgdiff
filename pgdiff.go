@@ -98,19 +98,19 @@ func main() {
 		if dbInfo1.DbSchema == "*" {
 			compareSchematas(conn1, conn2)
 		}
-		compareRoles(conn1, conn2)
-		compareFunctions(conn1, conn2)
 		compareSchematas(conn1, conn2)
+		compareRoles(conn1, conn2)
 		compareSequences(conn1, conn2)
 		compareTables(conn1, conn2)
 		compareColumns(conn1, conn2)
 		compareIndexes(conn1, conn2) // includes PK and Unique constraints
 		compareViews(conn1, conn2)
-		compareOwners(conn1, conn2)
 		compareForeignKeys(conn1, conn2)
+		compareFunctions(conn1, conn2)
+		compareTriggers(conn1, conn2)
+		compareOwners(conn1, conn2)
 		compareGrantRelationships(conn1, conn2)
 		compareGrantAttributes(conn1, conn2)
-		compareTriggers(conn1, conn2)
 	} else if schemaType == "SCHEMA" {
 		compareSchematas(conn1, conn2)
 	} else if schemaType == "ROLE" {
@@ -121,22 +121,22 @@ func main() {
 		compareTables(conn1, conn2)
 	} else if schemaType == "COLUMN" {
 		compareColumns(conn1, conn2)
-	} else if schemaType == "FUNCTION" {
-		compareFunctions(conn1, conn2)
-	} else if schemaType == "VIEW" {
-		compareViews(conn1, conn2)
 	} else if schemaType == "INDEX" {
 		compareIndexes(conn1, conn2)
+	} else if schemaType == "VIEW" {
+		compareViews(conn1, conn2)
 	} else if schemaType == "FOREIGN_KEY" {
 		compareForeignKeys(conn1, conn2)
+	} else if schemaType == "FUNCTION" {
+		compareFunctions(conn1, conn2)
+	} else if schemaType == "TRIGGER" {
+		compareTriggers(conn1, conn2)
 	} else if schemaType == "OWNER" {
 		compareOwners(conn1, conn2)
 	} else if schemaType == "GRANT_RELATIONSHIP" {
 		compareGrantRelationships(conn1, conn2)
 	} else if schemaType == "GRANT_ATTRIBUTE" {
 		compareGrantAttributes(conn1, conn2)
-	} else if schemaType == "TRIGGER" {
-		compareTriggers(conn1, conn2)
 	} else {
 		fmt.Println("Not yet handled:", schemaType)
 	}
@@ -200,8 +200,8 @@ Options:
   -p, --port2   : second port. default is 5432 
   -D, --dbname1 : first database name 
   -d, --dbname2 : second database name 
-  -S, --schema1 : first schema.  default is public
-  -s, --schema2 : second schema. default is public
+  -S, --schema1 : first schema.  default is all schemas
+  -s, --schema2 : second schema. default is all schemas
 
 <schemaTpe> can be: SCHEMA ROLE, SEQUENCE, TABLE, VIEW, COLUMN, INDEX, FOREIGN_KEY, OWNER, GRANT_RELATIONSHIP, GRANT_ATTRIBUTE
 `)

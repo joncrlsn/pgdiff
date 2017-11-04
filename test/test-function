@@ -52,9 +52,7 @@ echo
 ../pgdiff -U "u1" -W "asdf" -H "localhost" -D "db1" -S "s1" -O "sslmode=disable" \
           -u "u1" -w "asdf" -h "localhost" -d "db1" -s "s2" -o "sslmode=disable" \
           FUNCTION | grep -v '^-- '
-
 exit 0
-
 echo
 echo ==========================================================
 echo
@@ -64,21 +62,9 @@ echo
 # Compare the functions in all schemas between two databases
 #
 ./populate-db.sh db2 "
-    CREATE SCHEMA s1;
-    CREATE TABLE s1.table1 (
-      id integer PRIMARY KEY,
-      name varchar(32),
-      url varchar(200)
-    );
-    CREATE INDEX ON s1.table1(name);
-    CREATE INDEX ON s1.table1(url);
 
-    CREATE SCHEMA s2;
-    CREATE TABLE s2.table1 (
-      id integer PRIMARY KEY, 
-      name varchar(32),
-      url varchar(200)
-    );
+
+
 "
 
 echo

@@ -8,12 +8,6 @@ source ./start-fresh.sh >/dev/null
 echo
 echo ==============================================================
 
-echo
-echo "# Compare the tables between two schemas in the same database"
-echo "# Expect SQL:"
-echo "#   Add table9 to schema s2"
-echo "#   Drop table11 from schema s2"
-
 #
 # Compare the tables between two schemas in the same database
 #
@@ -29,20 +23,17 @@ echo "#   Drop table11 from schema s2"
 "
 
 echo
-echo "SQL to run:"
+echo "# Compare the tables between two schemas in the same database"
+echo "# Expect SQL:"
+echo "#   Add table9 to schema s2"
+echo "#   Drop table11 from schema s2"
+echo
 ../pgdiff -U "u1" -W "asdf" -H "localhost" -D "db1" -S "s1" -O "sslmode=disable" \
           -u "u1" -w "asdf" -h "localhost" -d "db1" -s "s2" -o "sslmode=disable" \
           TABLE | grep -v '^-- '
 
 echo
 echo ==============================================================
-
-echo
-echo "# Compare the tables in all schemas between two databases"
-echo "# Expect:"
-echo "#   Add s1.table10 to db2"
-echo "#   Drop s2.table12 from db2"
-
 
 ./populate-db.sh db2 "
     CREATE SCHEMA s1;
@@ -58,7 +49,11 @@ echo "#   Drop s2.table12 from db2"
 "
 
 echo
-echo "SQL to run:"
+echo "# Compare the tables in all schemas between two databases"
+echo "# Expect:"
+echo "#   Add s1.table10 to db2"
+echo "#   Drop s2.table12 from db2"
+echo
 ../pgdiff -U "u1" -W "asdf" -H "localhost" -D "db1" -S "*" -O "sslmode=disable" \
           -u "u1" -w "asdf" -h "localhost" -d "db2" -s "*" -o "sslmode=disable" \
           TABLE | grep -v '^-- '

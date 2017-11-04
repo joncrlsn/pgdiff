@@ -18,7 +18,7 @@ func parseFlags() (pgutil.DbInfo, pgutil.DbInfo) {
 	var dbHost1 = flag.StringP("host1", "H", "localhost", "db host")
 	var dbPort1 = flag.IntP("port1", "P", 5432, "db port")
 	var dbName1 = flag.StringP("dbname1", "D", "", "db name")
-	var dbSchema1 = flag.StringP("schema1", "S", "public", "schema name or * for all schemas")
+	var dbSchema1 = flag.StringP("schema1", "S", "*", "schema name or * for all schemas")
 	var dbOptions1 = flag.StringP("options1", "O", "", "db options (eg. sslmode=disable)")
 
 	var dbUser2 = flag.StringP("user2", "u", "", "db user")
@@ -26,7 +26,7 @@ func parseFlags() (pgutil.DbInfo, pgutil.DbInfo) {
 	var dbHost2 = flag.StringP("host2", "h", "localhost", "db host")
 	var dbPort2 = flag.IntP("port2", "p", 5432, "db port")
 	var dbName2 = flag.StringP("dbname2", "d", "", "db name")
-	var dbSchema2 = flag.StringP("schema2", "s", "public", "schema name or * for all schemas")
+	var dbSchema2 = flag.StringP("schema2", "s", "*", "schema name or * for all schemas")
 	var dbOptions2 = flag.StringP("options2", "o", "", "db options (eg. sslmode=disable)")
 
 	flag.Parse()
