@@ -27,7 +27,7 @@ CREATE FUNCTION s1.add(integer, integer) RETURNS integer
 
 
 CREATE SCHEMA s2;
-CREATE OR REPLACE FUNCTION s2.add(integer, integer) RETURNS integer
+CREATE OR REPLACE FUNCTION s2.add(bigint, bigint) RETURNS bigint
     AS 'select $1 + $2;'
     LANGUAGE SQL
     IMMUTABLE
@@ -51,7 +51,7 @@ echo
 
 ../pgdiff -U "u1" -W "asdf" -H "localhost" -D "db1" -S "s1" -O "sslmode=disable" \
           -u "u1" -w "asdf" -h "localhost" -d "db1" -s "s2" -o "sslmode=disable" \
-          FUNCTION | grep -v '^-- '
+          FUNCTION #| grep -v '^-- '
 exit 0
 echo
 echo ==========================================================
