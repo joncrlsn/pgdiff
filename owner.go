@@ -139,9 +139,7 @@ func (c OwnerSchema) Change(obj interface{}) {
 	}
 }
 
-/*
- * Compare the ownership of tables, sequences, and views between two databases or schemas
- */
+// compareOwners compares the ownership of tables, sequences, and views between two databases or schemas
 func compareOwners(conn1 *sql.DB, conn2 *sql.DB) {
 
 	buf1 := new(bytes.Buffer)

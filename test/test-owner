@@ -51,7 +51,9 @@ echo
 
 ../pgdiff -U "u1" -W "asdf" -H "localhost" -D "db1" -S "s1" -O "sslmode=disable" \
           -u "u1" -w "asdf" -h "localhost" -d "db1" -s "s2" -o "sslmode=disable" \
-          OWNER | grep -v '^-- '
+          OWNER #| grep -v '^-- '
+
+
 echo
 echo ==========================================================
 echo
@@ -85,6 +87,6 @@ echo
 
 ../pgdiff -U "u1" -W "asdf" -H "localhost" -D "db1" -S "*" -O "sslmode=disable" \
           -u "u1" -w "asdf" -h "localhost" -d "db2" -s "*" -o "sslmode=disable" \
-          OWNER | grep -v '^-- '
+          OWNER #| grep -v '^-- '
 echo
 echo
