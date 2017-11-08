@@ -13,6 +13,7 @@ import (
 	"github.com/joncrlsn/misc"
 	"github.com/joncrlsn/pgutil"
 	"sort"
+	"strings"
 	"text/template"
 )
 
@@ -24,10 +25,10 @@ var (
 func initTriggerSqlTemplate() *template.Template {
 	sql := `
     SELECT n.nspname AS schema_name
-       , {{if eq $.DbSchema "*" }}n.nspname || '.' || {{end}}c.relname AS compare_name
+       , {{if eq $.DbSchema "*" }}n.nspname || '.' || {{end}}c.relname || '.' || t.tgname AS compare_name
        , c.relname AS table_name
        , t.tgname AS trigger_name
-       , pg_catalog.pg_get_triggerdef(t.oid, true) AS definition
+       , pg_catalog.pg_get_triggerdef(t.oid, true) AS trigger_def
        , t.tgenabled AS enabled
     FROM pg_catalog.pg_trigger t
     INNER JOIN pg_catalog.pg_class c ON (c.oid = t.tgrelid)
@@ -57,10 +58,7 @@ func (slice TriggerRows) Len() int {
 }
 
 func (slice TriggerRows) Less(i, j int) bool {
-	if slice[i]["compare_name"] != slice[j]["compare_name"] {
-		return slice[i]["compare_name"] < slice[j]["compare_name"]
-	}
-	return slice[i]["trigger_name"] < slice[j]["trigger_name"]
+	return slice[i]["compare_name"] < slice[j]["compare_name"]
 }
 
 func (slice TriggerRows) Swap(i, j int) {
@@ -103,24 +101,27 @@ func (c *TriggerSchema) Compare(obj interface{}) int {
 	}
 
 	val := misc.CompareStrings(c.get("compare_name"), c2.get("compare_name"))
-	if val != 0 {
-		return val
-	}
-	val = misc.CompareStrings(c.get("trigger_name"), c2.get("trigger_name"))
 	return val
 }
 
 // Add returns SQL to create the trigger
 func (c TriggerSchema) Add() {
-	schema := dbInfo2.DbSchema
-	if schema == "*" {
-		schema = c.get("schema_name")
+	fmt.Println("-- Add")
+
+	// If we are comparing two different schemas against each other, we need to do some
+	// modification of the first trigger definition so we create it in the right schema
+	triggerDef := c.get("trigger_def")
+	schemaName := c.get("schema_name")
+	if dbInfo1.DbSchema != dbInfo2.DbSchema {
+		schemaName = dbInfo2.DbSchema
+		triggerDef = strings.Replace(
+			triggerDef,
+			fmt.Sprintf(" %s.%s ", c.get("schema_name"), c.get("table_name")),
+			fmt.Sprintf(" %s.%s ", schemaName, c.get("table_name")),
+			-1)
 	}
 
-	// NOTE: we may need to do some tweaking of the definition here to replace the old schema
-	// name with the new schema name.
-
-	fmt.Printf("%s;\n", c.get("definition"))
+	fmt.Printf("%s;\n", triggerDef)
 }
 
 // Drop returns SQL to drop the trigger
@@ -130,15 +131,31 @@ func (c TriggerSchema) Drop() {
 
 // Change handles the case where the trigger names match, but the definition does not
 func (c TriggerSchema) Change(obj interface{}) {
+	fmt.Println("-- Change")
 	c2, ok := obj.(*TriggerSchema)
 	if !ok {
 		fmt.Println("Error!!!, Change needs a TriggerSchema instance", c2)
 	}
-	if c.get("definition") != c2.get("definition") {
-		fmt.Println("-- This function looks different so we'll recreate it:")
-		// The definition column has everything needed to rebuild the function
+	if c.get("trigger_def") != c2.get("trigger_def") {
+		fmt.Println("-- This function looks different so we'll drop and recreate it:")
+
+		// If we are comparing two different schemas against each other, we need to do some
+		// modification of the first trigger definition so we create it in the right schema
+		triggerDef := c.get("trigger_def")
+		schemaName := c.get("schema_name")
+		if dbInfo1.DbSchema != dbInfo2.DbSchema {
+			schemaName = dbInfo2.DbSchema
+			triggerDef = strings.Replace(
+				triggerDef,
+				fmt.Sprintf(" %s.%s ", c.get("schema_name"), c.get("table_name")),
+				fmt.Sprintf(" %s.%s ", schemaName, c.get("table_name")),
+				-1)
+		}
+
+		// The trigger_def column has everything needed to rebuild the function
+		fmt.Printf("DROP TRIGGER %s ON %s.%s;\n", c.get("trigger_name"), schemaName, c.get("table_name"))
 		fmt.Println("-- STATEMENT-BEGIN")
-		fmt.Println(c.get("definition"))
+		fmt.Printf("%s;\n", triggerDef)
 		fmt.Println("-- STATEMENT-END")
 	}
 }
