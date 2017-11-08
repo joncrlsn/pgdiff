@@ -163,6 +163,10 @@ func (c FunctionSchema) Change(obj interface{}) {
 	}
 }
 
+// ==================================
+// Functions
+// ==================================
+
 // compareFunctions outputs SQL to make the functions match between DBs
 func compareFunctions(conn1 *sql.DB, conn2 *sql.DB) {
 

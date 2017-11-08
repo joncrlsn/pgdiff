@@ -1,5 +1,5 @@
 //
-// Copyright (c) 2014 Jon Carlson.  All rights reserved.
+// Copyright (c) 2017 Jon Carlson.  All rights reserved.
 // Use of this source code is governed by an MIT-style
 // license that can be found in the LICENSE file.
 //
@@ -35,7 +35,7 @@ FROM pg_class AS c
 INNER JOIN pg_authid AS a ON (a.oid = c.relowner)
 INNER JOIN pg_namespace AS n ON (n.oid = c.relnamespace)
 WHERE c.relkind IN ('r', 'S', 'v')
-{{if eq $.DbSchema "*"}}
+{{if eq $.DbSchema "*" }}
 AND n.nspname NOT LIKE 'pg_%' 
 AND n.nspname <> 'information_schema'
 {{else}}

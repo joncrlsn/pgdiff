@@ -1,17 +1,56 @@
 //
-// Copyright (c) 2014 Jon Carlson.  All rights reserved.
+// Copyright (c) 2017 Jon Carlson.  All rights reserved.
 // Use of this source code is governed by an MIT-style
 // license that can be found in the LICENSE file.
 //
 
 package main
 
-import "sort"
-import "fmt"
-import "strings"
-import "database/sql"
-import "github.com/joncrlsn/pgutil"
-import "github.com/joncrlsn/misc"
+import (
+	"bytes"
+	"database/sql"
+	"fmt"
+	"github.com/joncrlsn/misc"
+	"github.com/joncrlsn/pgutil"
+	"sort"
+	"strings"
+	"text/template"
+)
+
+var (
+	grantRelationshipSqlTemplate = initGrantRelationshipSqlTemplate()
+)
+
+// Initializes the Sql template
+func initGrantRelationshipSqlTemplate() *template.Template {
+	sql := `
+SELECT n.nspname AS schema_name
+  , {{ if eq $.DbSchema "*" }}n.nspname || '.' || {{ end }}c.relkind || '.' || c.relname AS compare_name
+  , CASE c.relkind
+    WHEN 'r' THEN 'TABLE'
+    WHEN 'v' THEN 'VIEW'
+    WHEN 'S' THEN 'SEQUENCE'
+    WHEN 'f' THEN 'FOREIGN TABLE'
+    END as type
+  , c.relname AS relationship_name
+  , unnest(c.relacl) AS relationship_acl
+FROM pg_catalog.pg_class c
+LEFT JOIN pg_catalog.pg_namespace n ON (n.oid = c.relnamespace)
+WHERE c.relkind IN ('r', 'v', 'S', 'f')
+AND pg_catalog.pg_table_is_visible(c.oid)
+{{ if eq $.DbSchema "*" }}
+AND n.nspname NOT LIKE 'pg_%'
+AND n.nspname <> 'information_schema'
+{{ else }}
+AND n.nspname = '{{ $.DbSchema }}'
+{{ end }};
+ORDER BY n.nspname, c.relname;
+`
+
+	t := template.New("GrantAttributeSqlTmpl")
+	template.Must(t.Parse(sql))
+	return t
+}
 
 // ==================================
 // GrantRelationshipRows definition
@@ -25,11 +64,8 @@ func (slice GrantRelationshipRows) Len() int {
 }
 
 func (slice GrantRelationshipRows) Less(i, j int) bool {
-	if slice[i]["schema"] != slice[j]["schema"] {
-		return slice[i]["schema"] < slice[j]["schema"]
-	}
-	if slice[i]["relationship_name"] != slice[j]["relationship_name"] {
-		return slice[i]["relationship_name"] < slice[j]["relationship_name"]
+	if slice[i]["compare_name"] != slice[j]["compare_name"] {
+		return slice[i]["compare_name"] < slice[j]["compare_name"]
 	}
 
 	// Only compare the role part of the ACL
@@ -94,12 +130,7 @@ func (c *GrantRelationshipSchema) Compare(obj interface{}) int {
 		return +999
 	}
 
-	val := misc.CompareStrings(c.get("schema"), c2.get("schema"))
-	if val != 0 {
-		return val
-	}
-
-	val = misc.CompareStrings(c.get("relationship_name"), c2.get("relationship_name"))
+	val := misc.CompareStrings(c.get("compare_name"), c2.get("compare_name"))
 	if val != 0 {
 		return val
 	}
@@ -165,31 +196,17 @@ func (c *GrantRelationshipSchema) Change(obj interface{}) {
 // Functions
 // ==================================
 
-/*
- * Compare the columns in the two databases
- */
+// compareGrantRelationships outputs SQL to make the granted permissions match between DBs or schemas
 func compareGrantRelationships(conn1 *sql.DB, conn2 *sql.DB) {
-	sql := `
-SELECT
-  n.nspname AS schema
-  , CASE c.relkind
-    WHEN 'r' THEN 'TABLE'
-    WHEN 'v' THEN 'VIEW'
-    WHEN 'S' THEN 'SEQUENCE'
-    WHEN 'f' THEN 'FOREIGN TABLE'
-    END as type
-  , c.relname AS relationship_name
-  , unnest(c.relacl) AS relationship_acl
-FROM pg_catalog.pg_class c
-LEFT JOIN pg_catalog.pg_namespace n ON (n.oid = c.relnamespace)
-WHERE c.relkind IN ('r', 'v', 'S', 'f')
-  AND n.nspname NOT LIKE 'pg_%' 
-  AND pg_catalog.pg_table_is_visible(c.oid)
-ORDER BY n.nspname, c.relname;
-`
 
-	rowChan1, _ := pgutil.QueryStrings(conn1, sql)
-	rowChan2, _ := pgutil.QueryStrings(conn2, sql)
+	buf1 := new(bytes.Buffer)
+	grantRelationshipSqlTemplate.Execute(buf1, dbInfo1)
+
+	buf2 := new(bytes.Buffer)
+	grantRelationshipSqlTemplate.Execute(buf2, dbInfo2)
+
+	rowChan1, _ := pgutil.QueryStrings(conn1, buf1.String())
+	rowChan2, _ := pgutil.QueryStrings(conn2, buf2.String())
 
 	rows1 := make(GrantRelationshipRows, 0)
 	for row := range rowChan1 {
@@ -203,7 +220,7 @@ ORDER BY n.nspname, c.relname;
 	}
 	sort.Sort(rows2)
 
-	// We have to explicitly type this as Schema here for some unknown reason
+	// We have to explicitly type this as Schema here for some unknown (to me) reason
 	var schema1 Schema = &GrantRelationshipSchema{rows: rows1, rowNum: -1}
 	var schema2 Schema = &GrantRelationshipSchema{rows: rows2, rowNum: -1}
 
