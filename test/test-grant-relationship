@@ -1,0 +1,83 @@
+#!/bin/bash
+#
+# Useful for visually inspecting the output SQL to verify it is doing what it should
+#
+
+source ./start-fresh.sh >/dev/null
+
+
+echo
+echo ==========================================================
+echo
+
+#
+# Compare the grants between two schemas in the same database
+#
+
+./populate-db.sh db1 "
+    CREATE SCHEMA s1;
+    CREATE TABLE s1.table1 (id integer);
+    GRANT INSERT, UPDATE ON s1.table1 TO u2;
+    CREATE TABLE s1.table2 (id integer);
+    GRANT SELECT ON s1.table2 TO u2;
+    CREATE TABLE s1.table3 (id integer); 
+    GRANT SELECT ON s1.table3 TO u2;  
+
+    CREATE SCHEMA s2;
+    CREATE TABLE s2.table1 (id integer);
+    GRANT SELECT ON s2.table1 TO u2;     -- add INSERT, UPDATE
+    CREATE TABLE s2.table2 (id integer); 
+    GRANT SELECT ON s2.table2 TO u2;     -- no change
+    CREATE TABLE s2.table3 (id integer); -- add SELECT
+"
+
+echo
+echo "# Compare the grants between two schemas in the same database"
+echo "# Expect SQL (pseudocode):"
+echo "#   Revoke SELECT on s2.table1 for u2"
+echo "#   Grant INSERT, UPDATE on s2.table1 for u2"
+echo "#   Grant SELECT on s2.table3 for u2"
+echo
+
+../pgdiff -U "u1" -W "asdf" -H "localhost" -D "db1" -S "s1" -O "sslmode=disable" \
+          -u "u1" -w "asdf" -h "localhost" -d "db1" -s "s2" -o "sslmode=disable" \
+          GRANT_RELATIONSHIP #| grep -v '^-- '
+
+exit 0
+
+
+echo
+echo ==========================================================
+echo
+
+
+#
+# Compare the grants in all schemas between two databases
+#
+./populate-db.sh db2 "
+    CREATE SCHEMA s1;
+    CREATE TABLE s1.table1 (id integer);
+    GRANT INSERT, UPDATE ON s1.table1 TO u2;
+    CREATE TABLE s1.table2 (id integer);
+    GRANT SELECT ON s1.table2 TO u2;
+    CREATE TABLE s1.table3 (id integer); 
+
+    CREATE SCHEMA s2;
+    CREATE TABLE s2.table1 (id integer);
+    GRANT SELECT ON s2.table1 TO u2;     -- add INSERT, UPDATE
+    CREATE TABLE s2.table2 (id integer); 
+    CREATE TABLE s2.table3 (id integer); -- no grants, so no change
+"
+
+echo
+echo "# Compare the grants in all schemas between two databases"
+echo "# Expect SQL (pseudocode):"
+echo "#   Revoke SELECT on s1.table3 for u2"
+echo "#   Grant SELECT on s2.table2 for u2"
+echo
+
+../pgdiff -U "u1" -W "asdf" -H "localhost" -D "db1" -S "*" -O "sslmode=disable" \
+          -u "u1" -w "asdf" -h "localhost" -d "db2" -s "*" -o "sslmode=disable" \
+          GRANT_RELATIONSHIP #| grep -v '^-- '
+echo
+echo

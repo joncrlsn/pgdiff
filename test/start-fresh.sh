@@ -14,6 +14,9 @@ psql <<'SQL'
 
     CREATE DATABASE db1 WITH OWNER = u1 TEMPLATE = template0;
     CREATE DATABASE db2 WITH OWNER = u1 TEMPLATE = template0;
+
+    DROP USER IF EXISTS u2;
+    CREATE USER u2 PASSWORD 'asdf';
 SQL
 EOT 
 

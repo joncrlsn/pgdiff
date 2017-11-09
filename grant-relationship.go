@@ -37,13 +37,13 @@ SELECT n.nspname AS schema_name
 FROM pg_catalog.pg_class c
 LEFT JOIN pg_catalog.pg_namespace n ON (n.oid = c.relnamespace)
 WHERE c.relkind IN ('r', 'v', 'S', 'f')
-AND pg_catalog.pg_table_is_visible(c.oid)
+--AND pg_catalog.pg_table_is_visible(c.oid)
 {{ if eq $.DbSchema "*" }}
 AND n.nspname NOT LIKE 'pg_%'
 AND n.nspname <> 'information_schema'
 {{ else }}
 AND n.nspname = '{{ $.DbSchema }}'
-{{ end }};
+{{ end }}
 ORDER BY n.nspname, c.relname;
 `
 
@@ -144,14 +144,19 @@ func (c *GrantRelationshipSchema) Compare(obj interface{}) int {
 
 // Add prints SQL to add the column
 func (c *GrantRelationshipSchema) Add() {
+	schema := dbInfo2.DbSchema
+	if schema == "*" {
+		schema = c.get("schema_name")
+	}
+
 	role, grants := parseGrants(c.get("relationship_acl"))
-	fmt.Printf("GRANT %s ON %s TO %s; -- Add\n", strings.Join(grants, ", "), c.get("relationship_name"), role)
+	fmt.Printf("GRANT %s ON %s.%s TO %s; -- Add\n", strings.Join(grants, ", "), schema, c.get("relationship_name"), role)
 }
 
 // Drop prints SQL to drop the column
 func (c *GrantRelationshipSchema) Drop() {
 	role, grants := parseGrants(c.get("relationship_acl"))
-	fmt.Printf("REVOKE %s ON %s FROM %s; -- Drop\n", strings.Join(grants, ", "), c.get("relationship_name"), role)
+	fmt.Printf("REVOKE %s ON %s.%s FROM %s; -- Drop\n", strings.Join(grants, ", "), c.get("schema_name"), c.get("relationship_name"), role)
 }
 
 // Change handles the case where the relationship and column match, but the details do not
@@ -173,7 +178,7 @@ func (c *GrantRelationshipSchema) Change(obj interface{}) {
 		}
 	}
 	if len(grantList) > 0 {
-		fmt.Printf("GRANT %s ON %s TO %s; -- Change\n", strings.Join(grantList, ", "), c.get("relationship_name"), role)
+		fmt.Printf("GRANT %s ON %s.%s TO %s; -- Change\n", strings.Join(grantList, ", "), c2.get("schema_name"), c.get("relationship_name"), role)
 	}
 
 	// Find grants in the second db that are not in the first
@@ -185,7 +190,7 @@ func (c *GrantRelationshipSchema) Change(obj interface{}) {
 		}
 	}
 	if len(revokeList) > 0 {
-		fmt.Printf("REVOKE %s ON %s FROM %s; -- Change\n", strings.Join(revokeList, ", "), c.get("relationship_name"), role)
+		fmt.Printf("REVOKE %s ON %s.%s FROM %s; -- Change\n", strings.Join(revokeList, ", "), c2.get("schema_name"), c.get("relationship_name"), role)
 	}
 
 	//	fmt.Printf("--1 rel:%s, relAcl:%s, col:%s, colAcl:%s\n", c.get("relationship_name"), c.get("relationship_acl"), c.get("column_name"), c.get("column_acl"))
