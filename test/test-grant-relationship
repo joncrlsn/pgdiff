@@ -29,6 +29,7 @@ echo
     CREATE TABLE s2.table2 (id integer); 
     GRANT SELECT ON s2.table2 TO u2;     -- no change
     CREATE TABLE s2.table3 (id integer); -- add SELECT
+    GRANT SELECT ON s2.table3 TO u1;  
 "
 
 echo
@@ -43,8 +44,6 @@ echo
           -u "u1" -w "asdf" -h "localhost" -d "db1" -s "s2" -o "sslmode=disable" \
           GRANT_RELATIONSHIP #| grep -v '^-- '
 
-exit 0
-
 
 echo
 echo ==========================================================
@@ -57,23 +56,27 @@ echo
 ./populate-db.sh db2 "
     CREATE SCHEMA s1;
     CREATE TABLE s1.table1 (id integer);
-    GRANT INSERT, UPDATE ON s1.table1 TO u2;
+    GRANT SELECT ON s1.table1 TO u2;
     CREATE TABLE s1.table2 (id integer);
     GRANT SELECT ON s1.table2 TO u2;
     CREATE TABLE s1.table3 (id integer); 
+    GRANT SELECT ON s1.table3 TO u2;  
 
     CREATE SCHEMA s2;
     CREATE TABLE s2.table1 (id integer);
-    GRANT SELECT ON s2.table1 TO u2;     -- add INSERT, UPDATE
-    CREATE TABLE s2.table2 (id integer); 
-    CREATE TABLE s2.table3 (id integer); -- no grants, so no change
+    GRANT SELECT ON s2.table1 TO u2;
+    CREATE TABLE s2.table2 (id integer);
+    GRANT SELECT ON s2.table2 TO u2;
+    CREATE TABLE s2.table3 (id integer);
+    GRANT UPDATE ON s2.table3 TO u2;  -- revoke
 "
 
 echo
 echo "# Compare the grants in all schemas between two databases"
 echo "# Expect SQL (pseudocode):"
-echo "#   Revoke SELECT on s1.table3 for u2"
-echo "#   Grant SELECT on s2.table2 for u2"
+echo "#   Revoke UPDATE        on s2.table3 for u2"
+echo "#   Grant  INSERT,UPDATE on s1.table1 for u2"
+echo "#   Revoke SELECT        on s1.table1 for u2"
 echo
 
 ../pgdiff -U "u1" -W "asdf" -H "localhost" -D "db1" -S "*" -O "sslmode=disable" \
