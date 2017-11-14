@@ -1,11 +1,10 @@
 #!/bin/bash
 #
-# Wipe out and recreate a testing user u1
-# Wipe out and recreate 2 known databases (db1, db2) used for testing 
+# Drop and recreate 2 testing users (u1, u2)
+# Drop and recreate 2 known databases (db1, db2) used for testing 
 #
 
-sudo su - postgres -- <<EOT
-psql <<'SQL'
+sql="
     DROP DATABASE IF EXISTS db1;
     DROP DATABASE IF EXISTS db2;
 
@@ -17,6 +16,6 @@ psql <<'SQL'
 
     DROP USER IF EXISTS u2;
     CREATE USER u2 PASSWORD 'asdf';
-SQL
-EOT 
+"
 
+sudo su - postgres -- -c "psql <<< \"$sql\""
