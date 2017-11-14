@@ -7,7 +7,6 @@
 package main
 
 import (
-	"text/template"
 	"bytes"
 	"database/sql"
 	"fmt"
@@ -15,6 +14,7 @@ import (
 	"github.com/joncrlsn/pgutil"
 	"sort"
 	"strings"
+	"text/template"
 )
 
 var (
@@ -26,7 +26,8 @@ func initGrantAttributeSqlTemplate() *template.Template {
 	sql := `
 -- Attribute/Column ACL only
 SELECT
-  n.nspname AS schema
+  n.nspname AS schema_name
+  , {{ if eq $.DbSchema "*" }}n.nspname || '.' || {{ end }}c.relkind || '.' || c.relname AS compare_name
   , CASE c.relkind
     WHEN 'r' THEN 'TABLE'
     WHEN 'v' THEN 'VIEW'
@@ -34,7 +35,7 @@ SELECT
     END as type
   , c.relname AS relationship_name
   , a.attname AS attribute_name
-  , a.attacl AS attribute_acl
+  , a.attacl  AS attribute_acl
 FROM pg_catalog.pg_class c
 LEFT JOIN pg_catalog.pg_namespace n ON (n.oid = c.relnamespace)
 INNER JOIN (SELECT attname, unnest(attacl) AS attacl, attrelid
@@ -42,30 +43,15 @@ INNER JOIN (SELECT attname, unnest(attacl) AS attacl, attrelid
            WHERE NOT attisdropped AND attacl IS NOT NULL)
       AS a ON (a.attrelid = c.oid)
 WHERE c.relkind IN ('r', 'v', 'f')
-AND n.nspname !~ '^pg_' 
-AND pg_catalog.pg_table_is_visible(c.oid)
-ORDER BY n.nspname, c.relname, a.attname;
+--AND pg_catalog.pg_table_is_visible(c.oid)
+{{ if eq $.DbSchema "*" }}
+AND n.nspname NOT LIKE 'pg_%'
+AND n.nspname <> 'information_schema'
+{{ else }}
+AND n.nspname = '{{ $.DbSchema }}'
+{{ end }};
 `
 
-	//sql := `
-	//SELECT n.nspname                 AS schema_name
-	//, {{if eq $.DbSchema "*" }}n.nspname || '.' || {{end}}p.proname AS compare_name
-	//, p.proname                  AS function_name
-	//, p.oid::regprocedure        AS fancy
-	//, t.typname                  AS return_type
-	//, pg_get_functiondef(p.oid)  AS definition
-	//FROM pg_proc AS p
-	//JOIN pg_type t ON (p.prorettype = t.oid)
-	//JOIN pg_namespace n ON (n.oid = p.pronamespace)
-	//JOIN pg_language l ON (p.prolang = l.oid AND l.lanname IN ('c','plpgsql', 'sql'))
-	//WHERE true
-	//{{if eq $.DbSchema "*" }}
-	//AND n.nspname NOT LIKE 'pg_%'
-	//AND n.nspname <> 'information_schema'
-	//{{else}}
-	//AND n.nspname = '{{$.DbSchema}}'
-	//{{end}};
-	//`
 	t := template.New("GrantAttributeSqlTmpl")
 	template.Must(t.Parse(sql))
 	return t
@@ -83,14 +69,8 @@ func (slice GrantAttributeRows) Len() int {
 }
 
 func (slice GrantAttributeRows) Less(i, j int) bool {
-	if slice[i]["schema"] != slice[j]["schema"] {
-		return slice[i]["schema"] < slice[j]["schema"]
-	}
-	if slice[i]["relationship_name"] != slice[j]["relationship_name"] {
-		return slice[i]["relationship_name"] < slice[j]["relationship_name"]
-	}
-	if slice[i]["attribute_name"] != slice[j]["attribute_name"] {
-		return slice[i]["attribute_name"] < slice[j]["attribute_name"]
+	if slice[i]["compare_name"] != slice[j]["compare_name"] {
+		return slice[i]["compare_name"] < slice[j]["compare_name"]
 	}
 
 	// Only compare the role part of the ACL
@@ -147,7 +127,8 @@ func (c *GrantAttributeSchema) NextRow() bool {
 	return !c.done
 }
 
-// Compare tells you, in one pass, whether or not the first row matches, is less than, or greater than the second row
+// Compare tells you, in one pass, whether or not the first row matches, is less than,
+// or greater than the second row.
 func (c *GrantAttributeSchema) Compare(obj interface{}) int {
 	c2, ok := obj.(*GrantAttributeSchema)
 	if !ok {
@@ -155,17 +136,7 @@ func (c *GrantAttributeSchema) Compare(obj interface{}) int {
 		return +999
 	}
 
-	val := misc.CompareStrings(c.get("schema"), c2.get("schema"))
-	if val != 0 {
-		return val
-	}
-
-	val = misc.CompareStrings(c.get("relationship_name"), c2.get("relationship_name"))
-	if val != 0 {
-		return val
-	}
-
-	val = misc.CompareStrings(c.get("attribute_name"), c2.get("attribute_name"))
+	val := misc.CompareStrings(c.get("compare_name"), c2.get("compare_name"))
 	if val != 0 {
 		return val
 	}
@@ -176,19 +147,24 @@ func (c *GrantAttributeSchema) Compare(obj interface{}) int {
 	return val
 }
 
-// Add prints SQL to add the column
+// Add prints SQL to add the grant
 func (c *GrantAttributeSchema) Add() {
+	schema := dbInfo2.DbSchema
+	if schema == "*" {
+		schema = c.get("schema_name")
+	}
+
 	role, grants := parseGrants(c.get("attribute_acl"))
-	fmt.Printf("GRANT %s (%s) ON %s TO %s; -- Add\n", strings.Join(grants, ", "), c.get("attribute_name"), c.get("relationship_name"), role)
+	fmt.Printf("GRANT %s (%s) ON %s.%s TO %s; -- Add\n", strings.Join(grants, ", "), c.get("attribute_name"), schema, c.get("relationship_name"), role)
 }
 
-// Drop prints SQL to drop the column
+// Drop prints SQL to drop the grant
 func (c *GrantAttributeSchema) Drop() {
 	role, grants := parseGrants(c.get("attribute_acl"))
-	fmt.Printf("REVOKE %s (%s) ON %s FROM %s; -- Drop\n", strings.Join(grants, ", "), c.get("attribute_name"), c.get("relationship_name"), role)
+	fmt.Printf("REVOKE %s (%s) ON %s.%s FROM %s; -- Drop\n", strings.Join(grants, ", "), c.get("attribute_name"), c.get("schema_name"), c.get("relationship_name"), role)
 }
 
-// Change handles the case where the relationship and column match, but the details do not
+// Change handles the case where the relationship and column match, but the grant does not
 func (c *GrantAttributeSchema) Change(obj interface{}) {
 	c2, ok := obj.(*GrantAttributeSchema)
 	if !ok {
@@ -207,7 +183,8 @@ func (c *GrantAttributeSchema) Change(obj interface{}) {
 		}
 	}
 	if len(grantList) > 0 {
-		fmt.Printf("GRANT %s (%s) ON %s TO %s; -- Change\n", strings.Join(grantList, ", "), c.get("attribute_name"), c.get("relationship_name"), role)
+		fmt.Printf("GRANT %s (%s) ON %s.%s TO %s; -- Change\n", strings.Join(grantList, ", "),
+			c.get("attribute_name"), c2.get("schema_name"), c.get("relationship_name"), role)
 	}
 
 	// Find grants in the second db that are not in the first
@@ -219,11 +196,11 @@ func (c *GrantAttributeSchema) Change(obj interface{}) {
 		}
 	}
 	if len(revokeList) > 0 {
-		fmt.Printf("REVOKE %s (%s) ON %s FROM %s; -- Change\n", strings.Join(grantList, ", "), c.get("attribute_name"), c.get("relationship_name"), role)
+		fmt.Printf("REVOKE %s (%s) ON %s.%s FROM %s; -- Change\n", strings.Join(revokeList, ", "), c.get("attribute_name"), c2.get("schema_name"), c.get("relationship_name"), role)
 	}
 
-	//	fmt.Printf("--1 rel:%s, relAcl:%s, col:%s, colAcl:%s\n", c.get("attribute_name"), c.get("attribute_acl"), c.get("attribute_name"), c.get("attribute_acl"))
-	//	fmt.Printf("--2 rel:%s, relAcl:%s, col:%s, colAcl:%s\n", c2.get("attribute_name"), c2.get("attribute_acl"), c2.get("attribute_name"), c2.get("attribute_acl"))
+	//fmt.Printf("--1 rel:%s, relAcl:%s, col:%s, colAcl:%s\n", c.get("attribute_name"), c.get("attribute_acl"), c.get("attribute_name"), c.get("attribute_acl"))
+	//fmt.Printf("--2 rel:%s, relAcl:%s, col:%s, colAcl:%s\n", c2.get("attribute_name"), c2.get("attribute_acl"), c2.get("attribute_name"), c2.get("attribute_acl"))
 }
 
 // ==================================
@@ -247,12 +224,18 @@ func compareGrantAttributes(conn1 *sql.DB, conn2 *sql.DB) {
 		rows1 = append(rows1, row)
 	}
 	sort.Sort(rows1)
+		for _, row := range rows1 {
+			fmt.Printf("--1b compare:%s, col:%s, colAcl:%s\n", row["compare_name"], row["attribute_name"], row["attribute_acl"])
+		}
 
 	rows2 := make(GrantAttributeRows, 0)
 	for row := range rowChan2 {
 		rows2 = append(rows2, row)
 	}
 	sort.Sort(rows2)
+	for _, row := range rows2 {
+	fmt.Printf("--2b compare:%s, col:%s, colAcl:%s\n", row["compare_name"], row["attribute_name"], row["attribute_acl"])
+	}
 
 	// We have to explicitly type this as Schema here for some unknown reason
 	var schema1 Schema = &GrantAttributeSchema{rows: rows1, rowNum: -1}

@@ -1,0 +1,123 @@
+#!/bin/bash
+#
+# Useful for visually inspecting the output SQL to verify it is doing what it should
+#
+
+source ./start-fresh.sh >/dev/null
+
+
+echo
+echo ==========================================================
+echo
+
+#
+# Compare the grants between two schemas in the same database
+#
+
+./populate-db.sh db1 "
+    -- Available Column Privileges: SELECT, INSERT, UPDATE, REFERENCES
+
+    CREATE SCHEMA s1;
+    CREATE SCHEMA s2;
+
+    ---------
+
+    CREATE TABLE s1.table1 (id integer, name varchar(30));
+    GRANT SELECT, UPDATE (name) ON s1.table1 TO u2;
+
+    -- Drop REFERENCES, Add UPDATE
+    CREATE TABLE s2.table1 (id integer, name varchar(30));
+    GRANT SELECT, REFERENCES (name) ON s2.table1 TO u2;   
+
+    ---------
+
+    CREATE TABLE s1.table2 (id integer, name varchar(30));
+    -- u2 has no privileges
+
+    -- Drop SELECT on s1.table2
+    CREATE TABLE s2.table2 (id integer, name varchar(30));
+    GRANT SELECT (name) ON s2.table2 TO u2;
+
+    ---------
+
+    CREATE TABLE s1.table3 (id integer, name varchar(30));
+    GRANT SELECT (name) ON s1.table3 TO u2;
+
+    -- Add SELECT on s1.table3
+    CREATE TABLE s2.table3 (id integer, name varchar(30));
+    -- u2 has no privileges
+"
+
+echo
+echo "# Compare the grants between two schemas in the same database"
+echo "# Expect SQL (pseudocode):"
+echo "#   Grant  UPDATE     on s2.table1 (name) for u2"
+echo "#   Revoke REFERENCES on s2.table1 (name) for u2"
+echo "#   Revoke SELECT     on s2.table2 (name) for u2"
+echo "#   Grant  SELECT     on s2.table3 (name) for u2"
+echo
+
+../pgdiff -U "u1" -W "asdf" -H "localhost" -D "db1" -S "s1" -O "sslmode=disable" \
+          -u "u1" -w "asdf" -h "localhost" -d "db1" -s "s2" -o "sslmode=disable" \
+          GRANT_ATTRIBUTE | grep -v '^-- '
+
+echo
+echo ==========================================================
+echo
+
+
+source ./start-fresh.sh >/dev/null
+
+#
+# Compare the grants in all schemas between two databases
+#
+
+./populate-db.sh db1 "
+    CREATE SCHEMA s1;
+    CREATE SCHEMA s2;
+    ---------
+    CREATE TABLE s1.table1 (id integer, name varchar(30));
+    GRANT SELECT, UPDATE (name) ON s1.table1 TO u2;
+
+    CREATE TABLE s2.table1 (id integer, name varchar(30));
+    GRANT SELECT, UPDATE (name) ON s2.table1 TO u2;
+
+    CREATE TABLE s2.table3 (id integer, name varchar(30));
+"
+
+./populate-db.sh db2 "
+    CREATE SCHEMA s1;
+    CREATE SCHEMA s2;
+    ---------
+    CREATE TABLE s1.table1 (id integer, name varchar(30));
+    GRANT SELECT (id) ON s1.table1 TO u2;
+    GRANT SELECT, UPDATE (name) ON s1.table1 TO u2;
+
+    CREATE TABLE s2.table1 (id integer, name varchar(30));
+
+    CREATE TABLE s2.table3 (id integer, name varchar(30));
+    GRANT SELECT, UPDATE (name) ON s2.table3 TO u2;
+"
+
+# GRANT UPDATE (name) ON s1.table1 TO u2; -- Change
+# REVOKE SELECT (name) ON s1.table1 FROM u2; -- Change
+# REVOKE UPDATE (name) ON s1.table1 FROM u2; -- Drop
+# GRANT UPDATE (name) ON s2.table1 TO u2; -- Add
+# REVOKE UPDATE (name) ON s2.table3 FROM u2; -- Drop
+
+echo
+echo "# Compare the grants in all schemas between two databases"
+echo "# Expect SQL (pseudocode):"
+echo "#   Grant  UPDATE (name)         on s1.table1 for u2"
+echo "#   Revoke SELECT (id)           on s1.table1 for u2"
+
+echo "#   Revoke SELECT (id)           on s1.table1 for u2"
+echo "#   Grant  SELECT, UPDATE (name) on s2.table2 for u2"
+echo "#   Revoke SELECT, UPDATE (name) on s2.table3 for u2"
+echo
+
+../pgdiff -U "u1" -W "asdf" -H "localhost" -D "db1" -S "*" -O "sslmode=disable" \
+          -u "u1" -w "asdf" -h "localhost" -d "db2" -s "*" -o "sslmode=disable" \
+          GRANT_ATTRIBUTE #| grep -v '^-- '
+echo
+echo

@@ -6,13 +6,6 @@
 # Rebuild the basic databases
 source ./start-fresh.sh >/dev/null
 
-# An additional user/role is needed for this test
-sudo su - postgres -- -c " 
-  psql -c \" 
-    DROP USER IF EXISTS u2; CREATE USER u2 WITH SUPERUSER PASSWORD 'asdf'; 
-  \"
-"
-
 
 echo
 echo ==========================================================

@@ -43,11 +43,10 @@ AND n.nspname NOT LIKE 'pg_%'
 AND n.nspname <> 'information_schema'
 {{ else }}
 AND n.nspname = '{{ $.DbSchema }}'
-{{ end }}
-ORDER BY n.nspname, c.relname;
+{{ end }};
 `
 
-	t := template.New("GrantAttributeSqlTmpl")
+	t := template.New("GrantRelationshipSqlTmpl")
 	template.Must(t.Parse(sql))
 	return t
 }
@@ -139,10 +138,9 @@ func (c *GrantRelationshipSchema) Compare(obj interface{}) int {
 	relRole2, _ := parseAcl(c2.get("relationship_acl"))
 	val = misc.CompareStrings(relRole1, relRole2)
 	return val
-
 }
 
-// Add prints SQL to add the column
+// Add prints SQL to add the grant
 func (c *GrantRelationshipSchema) Add() {
 	schema := dbInfo2.DbSchema
 	if schema == "*" {
@@ -153,13 +151,13 @@ func (c *GrantRelationshipSchema) Add() {
 	fmt.Printf("GRANT %s ON %s.%s TO %s; -- Add\n", strings.Join(grants, ", "), schema, c.get("relationship_name"), role)
 }
 
-// Drop prints SQL to drop the column
+// Drop prints SQL to drop the grant
 func (c *GrantRelationshipSchema) Drop() {
 	role, grants := parseGrants(c.get("relationship_acl"))
 	fmt.Printf("REVOKE %s ON %s.%s FROM %s; -- Drop\n", strings.Join(grants, ", "), c.get("schema_name"), c.get("relationship_name"), role)
 }
 
-// Change handles the case where the relationship and column match, but the details do not
+// Change handles the case where the relationship and column match, but the grant does not
 func (c *GrantRelationshipSchema) Change(obj interface{}) {
 	c2, ok := obj.(*GrantRelationshipSchema)
 	if !ok {
