@@ -27,7 +27,7 @@ func initGrantAttributeSqlTemplate() *template.Template {
 -- Attribute/Column ACL only
 SELECT
   n.nspname AS schema_name
-  , {{ if eq $.DbSchema "*" }}n.nspname || '.' || {{ end }}c.relkind || '.' || c.relname AS compare_name
+  , {{ if eq $.DbSchema "*" }}n.nspname || '.' || {{ end }}c.relkind || '.' || c.relname || '.' || a.attname AS compare_name
   , CASE c.relkind
     WHEN 'r' THEN 'TABLE'
     WHEN 'v' THEN 'VIEW'
@@ -224,18 +224,18 @@ func compareGrantAttributes(conn1 *sql.DB, conn2 *sql.DB) {
 		rows1 = append(rows1, row)
 	}
 	sort.Sort(rows1)
-		for _, row := range rows1 {
-			fmt.Printf("--1b compare:%s, col:%s, colAcl:%s\n", row["compare_name"], row["attribute_name"], row["attribute_acl"])
-		}
+	//for _, row := range rows1 {
+		//fmt.Printf("--1b compare:%s, col:%s, colAcl:%s\n", row["compare_name"], row["attribute_name"], row["attribute_acl"])
+	//}
 
 	rows2 := make(GrantAttributeRows, 0)
 	for row := range rowChan2 {
 		rows2 = append(rows2, row)
 	}
 	sort.Sort(rows2)
-	for _, row := range rows2 {
-	fmt.Printf("--2b compare:%s, col:%s, colAcl:%s\n", row["compare_name"], row["attribute_name"], row["attribute_acl"])
-	}
+	//for _, row := range rows2 {
+		//fmt.Printf("--2b compare:%s, col:%s, colAcl:%s\n", row["compare_name"], row["attribute_name"], row["attribute_acl"])
+	//}
 
 	// We have to explicitly type this as Schema here for some unknown reason
 	var schema1 Schema = &GrantAttributeSchema{rows: rows1, rowNum: -1}
