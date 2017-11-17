@@ -92,17 +92,17 @@ This project works on Windows, just not as nicely as it does for Linux and Mac. 
 
 
 ### version history
-1. 0.9.0 - Implemented ROLE, SEQUENCE, TABLE, COLUMN, INDEX, FOREIGN\_KEY, OWNER, GRANT\_RELATIONSHIP, GRANT\_ATTRIBUTE
-1. 0.9.1 - Added VIEW, FUNCTION, and TRIGGER (Thank you, Shawn Carroll AKA SparkeyG)
-1. 0.9.2 - Fixed bug when using the non-default port
-1. 0.9.3 - Fixed VARCHAR bug when no max length specified
-1. 1.0.0 - Adding support for comparing two different schemas (same or different db), one schema between databases, or all schemas between databases.
+* 0.9.0 - Implemented ROLE, SEQUENCE, TABLE, COLUMN, INDEX, FOREIGN\_KEY, OWNER, GRANT\_RELATIONSHIP, GRANT\_ATTRIBUTE
+* 0.9.1 - Added VIEW, FUNCTION, and TRIGGER (Thank you, Shawn Carroll AKA SparkeyG)
+* 0.9.2 - Fixed bug when using the non-default port
+* 0.9.3 - Fixed VARCHAR bug when no max length specified
+* 1.0.0 - Adding support for comparing two different schemas (same or different db), one schema between databases, or all schemas between databases. (Also removed binaries from git repository)
 
 ### getting help
 If you think you found a bug, it might help me replicate it if you find the appropriate test script (in the test directory) and modify it to show the problem.  Attach the script to an Issue request.
 
 ### todo
-1. fix SQL for adding an array column
-1. create windows version of pgdiff.sh (or even better: re-write it all in Go)
-1. allow editing of individual SQL lines after failure (this would probably be done in the script pgdiff.sh)
-1. store failed SQL statements in an error file for later fixing and rerunning?
+* fix SQL for adding an array column
+* create windows version of pgdiff.sh (or even better: re-write it all in Go)
+* allow editing of individual SQL lines after failure (this would probably be done in the script pgdiff.sh)
+* store failed SQL statements in an error file for later fixing and rerunning?

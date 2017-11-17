@@ -2,10 +2,10 @@
 
 These instructions will guide you through the process of generating SQL, reviewing it, and optionally running it on the target database. It requires a familiarity with a Linux command-line shell.
 
-1. download pgdiff.tgz to your machine
-1. untar pgdiff.tgz (a new directory will be created: called pgdiff)
+1. download pgdiff-linux-\<version\>.tar.gz to your machine
+1. untar it (a new directory will be created: called pgdiff)
 1. cd into the new pgdiff directory
-1. optionally edit pgdiff.sh to change the db access values... or set them at runtime (i.e. USER1=joe NAME1=mydb USER2=joe NAME2=myotherdb ./pgdiff.sh)
+1. edit pgdiff.sh to change the db access values... or set them at runtime (i.e. USER1=joe NAME1=mydb USER2=joe NAME2=myotherdb ./pgdiff.sh)
 1. run pgdiff.sh
 
 ## tar contents
