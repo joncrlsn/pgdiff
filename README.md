@@ -88,17 +88,18 @@ linux and osx binaries are packaged with an extra, optional bash script and pgru
 1. manually run pgdiff.exe for each schema type listed in the usage section above
 1. review the SQL output and, if you want to make them match, run it against the second db
 
-Unfortunately this project does not have as much support for Windows as it does for Linux and Mac.  If you are inclined to write a Windows complement to the pgdiff.sh script, feel free to contribute it or we can link to it.  Even better would be a replacement written in Go.
+This project works on Windows, just not as nicely as it does for Linux and Mac.  If you are inclined to write a Windows complement to the pgdiff.sh script, feel free to contribute it or we can link to it.  Even better would be a replacement written in Go.
 
 
 ### version history
 1. 0.9.0 - Implemented ROLE, SEQUENCE, TABLE, COLUMN, INDEX, FOREIGN\_KEY, OWNER, GRANT\_RELATIONSHIP, GRANT\_ATTRIBUTE
 1. 0.9.1 - Added VIEW, FUNCTION, and TRIGGER (Thank you, Shawn Carroll AKA SparkeyG)
 1. 0.9.2 - Fixed bug when using the non-default port
-1. 0.9.3 - Added support for comparing two different schemas (same or different db), one schema between databases, or all schemas between databases.  Fixed VARCHAR bug when no max length specified.
+1. 0.9.3 - Fixed VARCHAR bug when no max length specified
+1. 1.0.0 - Adding support for comparing two different schemas (same or different db), one schema between databases, or all schemas between databases.
 
 ### getting help
-If you think you found a bug, find the appropriate test script (in the test directory) and modify it to show the problem.  Attach the script to an Issue request.
+If you think you found a bug, it might help me replicate it if you find the appropriate test script (in the test directory) and modify it to show the problem.  Attach the script to an Issue request.
 
 ### todo
 1. fix SQL for adding an array column
