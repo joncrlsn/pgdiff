@@ -7,8 +7,8 @@ pgdiff is transparent in what it does, so it never modifies a database directly.
 pgdiff is written to be easy to expand and improve the accuracy of the diff.
 
 
-### download
-[osx](https://github.com/joncrlsn/pgdiff/raw/master/bin-osx/pgdiff.tgz "OSX version") &nbsp; [linux](https://github.com/joncrlsn/pgdiff/raw/master/bin-linux/pgdiff.tgz "Linux version") &nbsp; [windows](https://github.com/joncrlsn/pgdiff/raw/master/bin-win/pgdiff.exe "Windows version")
+### download 1.0 beta 1
+[osx](https://github.com/joncrlsn/pgdiff/releases/download/v1.0-beta.1/pgdiff-osx-1.0b1.tar.gz "OSX version") &nbsp; [linux](https://github.com/joncrlsn/pgdiff/files/1480823/pgdiff-linux-1.0b1.tar.gz  "Linux version") &nbsp; [windows](https://github.com/joncrlsn/pgdiff/releases/download/v1.0-beta.1/pgdiff-win-1.0b1.zip "Windows version")
 
 
 ### usage
