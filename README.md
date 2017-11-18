@@ -41,8 +41,8 @@ Schema type ordering:
 I have found it helpful to take ```--schema-only``` dumps of the databases in question, load them into a local postgres, then do my sql generation and testing there before running the SQL against a more official database. Your local postgres instance will need the correct users/roles populated because db dumps do not copy that information.
 
 ```
-pgdiff -U dbuser -H localhost -D refDB  -O "sslmode=disable" -S "public" \
-       -u dbuser -h localhost -d compDB -o "sslmode=disable" -s "public" \
+pgdiff -U dbuser -H localhost -D refDB  -O "sslmode=disable" -S public \
+       -u dbuser -h localhost -d compDB -o "sslmode=disable" -s public \
        TABLE 
 ```
 
@@ -78,7 +78,7 @@ linux and osx binaries are packaged with an extra, optional bash script and pgru
 1. cd to the new pgdiff directory
 1. edit the db connection defaults in pgdiff.sh 
 1. ...or manually run pgdiff for each schema type listed in the usage section above
-1. review the SQL output for each schema type and, if you want to make them match, run it against db2 (Function SQL requires the use of pgrun instead of psql)
+1. review the SQL output for each schema type and, if you want to make them match, run it against the second db
 
 
 ### getting started on windows
@@ -99,7 +99,7 @@ This project works on Windows, just not as nicely as it does for Linux and Mac. 
 * 1.0.0 - Adding support for comparing two different schemas (same or different db), one schema between databases, or all schemas between databases. (Also removed binaries from git repository)
 
 ### getting help
-If you think you found a bug, it might help me replicate it if you find the appropriate test script (in the test directory) and modify it to show the problem.  Attach the script to an Issue request.
+If you think you found a bug, it might help replicate it if you find the appropriate test script (in the test directory) and modify it to show the problem.  Attach the script to an Issue request.
 
 ### todo
 * fix SQL for adding an array column
