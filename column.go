@@ -119,15 +119,15 @@ func (c *ColumnSchema) Add() {
 	if c.get("data_type") == "character varying" {
 		maxLength, valid := getMaxLength(c.get("character_maximum_length"))
 		if !valid {
-			fmt.Printf("ALTER TABLE %s.%s ADD COLUMN %s character varying", schema, c.get("table_name"), c.get("column_name"))
+			fmt.Printf("ALTER TABLE \"%s\".\"%s\" ADD COLUMN \"%s\" character varying", schema, c.get("table_name"), c.get("column_name"))
 		} else {
-			fmt.Printf("ALTER TABLE %s.%s ADD COLUMN %s character varying(%s)", schema, c.get("table_name"), c.get("column_name"), maxLength)
+			fmt.Printf("ALTER TABLE \"%s\".\"%s\" ADD COLUMN \"%s\" character varying(%s)", schema, c.get("table_name"), c.get("column_name"), maxLength)
 		}
 	} else {
 		if c.get("data_type") == "ARRAY" {
 			fmt.Println("-- Note that adding of array data types are not yet generated properly.")
 		}
-		fmt.Printf("ALTER TABLE %s.%s ADD COLUMN %s %s", schema, c.get("table_name"), c.get("column_name"), c.get("data_type"))
+		fmt.Printf("ALTER TABLE \"%s\".\"%s\" ADD COLUMN \"%s\" %s", schema, c.get("table_name"), c.get("column_name"), c.get("data_type"))
 	}
 
 	if c.get("is_nullable") == "NO" {
@@ -142,7 +142,7 @@ func (c *ColumnSchema) Add() {
 // Drop prints SQL to drop the column
 func (c *ColumnSchema) Drop() {
 	// if dropping column
-	fmt.Printf("ALTER TABLE %s.%s DROP COLUMN IF EXISTS %s;\n", c.get("table_schema"), c.get("table_name"), c.get("column_name"))
+	fmt.Printf("ALTER TABLE \"%s\".\"%s\" DROP COLUMN IF EXISTS \"%s\";\n", c.get("table_schema"), c.get("table_name"), c.get("column_name"))
 }
 
 // Change handles the case where the table and column match, but the details do not
@@ -172,7 +172,7 @@ func (c *ColumnSchema) Change(obj interface{}) {
 					fmt.Println("-- WARNING: The next statement will shorten a character varying column, which may result in data loss.")
 				}
 				fmt.Printf("-- max1Valid: %v  max2Valid: %v \n", max1Valid, max2Valid)
-				fmt.Printf("ALTER TABLE %s.%s ALTER COLUMN %s TYPE character varying(%s);\n", c2.get("table_schema"), c.get("table_name"), c.get("column_name"), max1)
+				fmt.Printf("ALTER TABLE \"%s\".\"%s\" ALTER COLUMN \"%s\" TYPE character varying(%s);\n", c2.get("table_schema"), c.get("table_name"), c.get("column_name"), max1)
 			}
 		}
 	}
@@ -185,27 +185,27 @@ func (c *ColumnSchema) Change(obj interface{}) {
 			if !max1Valid {
 				fmt.Println("-- WARNING: varchar column has no maximum length.  Setting to 1024")
 			}
-			fmt.Printf("ALTER TABLE %s.%s ALTER COLUMN %s TYPE %s(%s);\n", c2.get("table_schema"), c.get("table_name"), c.get("column_name"), c.get("data_type"), max1)
+			fmt.Printf("ALTER TABLE \"%s\".\"%s\" ALTER COLUMN \"%s\" TYPE %s(%s);\n", c2.get("table_schema"), c.get("table_name"), c.get("column_name"), c.get("data_type"), max1)
 		} else {
-			fmt.Printf("ALTER TABLE %s.%s ALTER COLUMN %s TYPE %s;\n", c2.get("table_schema"), c.get("table_name"), c.get("column_name"), c.get("data_type"))
+			fmt.Printf("ALTER TABLE \"%s\".\"%s\" ALTER COLUMN \"%s\" TYPE %s;\n", c2.get("table_schema"), c.get("table_name"), c.get("column_name"), c.get("data_type"))
 		}
 	}
 
 	// Detect column default change (or added, dropped)
 	if c.get("column_default") == "null" {
 		if c.get("column_default") != "null" {
-			fmt.Printf("ALTER TABLE %s.%s ALTER COLUMN %s DROP DEFAULT;\n", c2.get("table_schema"), c.get("table_name"), c.get("column_name"))
+			fmt.Printf("ALTER TABLE \"%s\".\"%s\" ALTER COLUMN \"%s\" DROP DEFAULT;\n", c2.get("table_schema"), c.get("table_name"), c.get("column_name"))
 		}
 	} else if c.get("column_default") != c2.get("column_default") {
-		fmt.Printf("ALTER TABLE %s.%s ALTER COLUMN %s SET DEFAULT %s;\n", c2.get("table_schema"), c.get("table_name"), c.get("column_name"), c.get("column_default"))
+		fmt.Printf("ALTER TABLE \"%s\".\"%s\" ALTER COLUMN \"%s\" SET DEFAULT %s;\n", c2.get("table_schema"), c.get("table_name"), c.get("column_name"), c.get("column_default"))
 	}
 
 	// Detect not-null and nullable change
 	if c.get("is_nullable") != c2.get("is_nullable") {
 		if c.get("is_nullable") == "YES" {
-			fmt.Printf("ALTER TABLE %s.%s ALTER COLUMN %s DROP NOT NULL;\n", c2.get("table_schema"), c.get("table_name"), c.get("column_name"))
+			fmt.Printf("ALTER TABLE \"%s\".\"%s\" ALTER COLUMN \"%s\" DROP NOT NULL;\n", c2.get("table_schema"), c.get("table_name"), c.get("column_name"))
 		} else {
-			fmt.Printf("ALTER TABLE %s.%s ALTER COLUMN %s SET NOT NULL;\n", c2.get("table_schema"), c.get("table_name"), c.get("column_name"))
+			fmt.Printf("ALTER TABLE \"%s\".\"%s\" ALTER COLUMN \"%s\" SET NOT NULL;\n", c2.get("table_schema"), c.get("table_name"), c.get("column_name"))
 		}
 	}
 }

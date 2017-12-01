@@ -158,10 +158,10 @@ func (c *IndexSchema) Add() {
 		// Create the constraint using the index we just created
 		if c.get("pk") == "true" {
 			// Add primary key using the index
-			fmt.Printf("ALTER TABLE %s.%s ADD CONSTRAINT %s PRIMARY KEY USING INDEX %s; -- (1)\n", schema, c.get("table_name"), c.get("index_name"), c.get("index_name"))
+			fmt.Printf("ALTER TABLE \"%s\".\"%s\" ADD CONSTRAINT %s PRIMARY KEY USING INDEX %s; -- (1)\n", schema, c.get("table_name"), c.get("index_name"), c.get("index_name"))
 		} else if c.get("uq") == "true" {
 			// Add unique constraint using the index
-			fmt.Printf("ALTER TABLE %s.%s ADD CONSTRAINT %s UNIQUE USING INDEX %s; -- (2)\n", schema, c.get("table_name"), c.get("index_name"), c.get("index_name"))
+			fmt.Printf("ALTER TABLE \"%s\".\"%s\" ADD CONSTRAINT %s UNIQUE USING INDEX %s; -- (2)\n", schema, c.get("table_name"), c.get("index_name"), c.get("index_name"))
 		}
 	}
 }
@@ -170,9 +170,9 @@ func (c *IndexSchema) Add() {
 func (c *IndexSchema) Drop() {
 	if c.get("constraint_def") != "null" {
 		fmt.Println("-- Warning, this may drop foreign keys pointing at this column.  Make sure you re-run the FOREIGN_KEY diff after running this SQL.")
-		fmt.Printf("ALTER TABLE %s.%s DROP CONSTRAINT %s CASCADE; -- %s\n", c.get("schema_name"), c.get("table_name"), c.get("index_name"), c.get("constraint_def"))
+		fmt.Printf("ALTER TABLE \"%s\".\"%s\" DROP CONSTRAINT %s CASCADE; -- %s\n", c.get("schema_name"), c.get("table_name"), c.get("index_name"), c.get("constraint_def"))
 	}
-	fmt.Printf("DROP INDEX %s.%s;\n", c.get("schema_name"), c.get("index_name"))
+	fmt.Printf("DROP INDEX \"%s\".%s;\n", c.get("schema_name"), c.get("index_name"))
 }
 
 // Change handles the case where the table and column match, but the details do not

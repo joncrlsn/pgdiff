@@ -1,0 +1,33 @@
+#!/bin/bash
+#
+# Useful for visually inspecting the output SQL to verify it is doing what it should
+#
+
+source ./start-fresh.sh >/dev/null 
+
+echo
+echo ==============================================================
+
+#
+# Compare the tables between two schemas in the same database
+#
+./populate-db.sh db1 '
+CREATE TABLE "public"."Test" (
+	"TestID" integer
+);
+'
+
+./populate-db.sh db2 '
+CREATE TABLE public."Test" (
+	"TestID" integer
+);
+'
+
+echo
+echo "# Compare the tables between two databases"
+echo "# Expect no changes:"
+echo
+../pgdiff -U "u1" -W "asdf" -H "localhost" -D "db1" -S "*" -O "sslmode=disable" \
+          -u "u1" -w "asdf" -h "localhost" -d "db2" -s "*" -o "sslmode=disable" \
+          TABLE #| grep -v '^-- '
+echo

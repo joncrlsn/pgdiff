@@ -13,8 +13,9 @@ echo ==============================================================
 #
 #psql -U u1 -h localhost -d db1 <<'EOS'
 ./populate-db.sh db1 "
-    CREATE SCHEMA s1;
+    CREATE SCHEMA \"s1\";
     CREATE TABLE s1.table9 (id integer); -- to be added to s2
+    --CREATE TABLE s1.\"Table9\" (id integer); -- to be added to s2
     CREATE TABLE s1.table10 (id integer);
     
     CREATE SCHEMA s2;

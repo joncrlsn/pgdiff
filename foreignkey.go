@@ -128,12 +128,12 @@ func (c *ForeignKeySchema) Add() {
 	if schema == "*" {
 		schema = c.get("schema_name")
 	}
-	fmt.Printf("ALTER TABLE %s.%s ADD CONSTRAINT %s %s;\n", schema, c.get("table_name"), c.get("fk_name"), c.get("constraint_def"))
+	fmt.Printf("ALTER TABLE \"%s\".\"%s\" ADD CONSTRAINT %s %s;\n", schema, c.get("table_name"), c.get("fk_name"), c.get("constraint_def"))
 }
 
 // Drop returns SQL to drop the foreign key
 func (c ForeignKeySchema) Drop() {
-	fmt.Printf("ALTER TABLE %s.%s DROP CONSTRAINT %s; -- %s\n", c.get("schema_name"), c.get("table_name"), c.get("fk_name"), c.get("constraint_def"))
+	fmt.Printf("ALTER TABLE \"%s\".\"%s\" DROP CONSTRAINT %s; -- %s\n", c.get("schema_name"), c.get("table_name"), c.get("fk_name"), c.get("constraint_def"))
 }
 
 // Change handles the case where the table and foreign key name, but the details do not

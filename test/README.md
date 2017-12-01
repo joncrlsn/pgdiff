@@ -6,3 +6,5 @@ These can be good templates for isolating bugs in the different data diffs.
 Connect to the database manually:
   sudo su - postgres -- -c "psql -d db1"
 
+Connect to the example db:
+
