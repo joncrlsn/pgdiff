@@ -12,29 +12,31 @@ echo
 # Compare the indexes between two schemas in the same database
 #
 
-./populate-db.sh db1 "
+./populate-db.sh db1 '
     CREATE SCHEMA s1;
-    CREATE TABLE s1.table1 (
+    CREATE TABLE s1."Table1" (
       id integer PRIMARY KEY,
       name varchar(32),
       url varchar(200)
     );
-    CREATE INDEX ON s1.table1(name);
+    CREATE INDEX "Table1NameIx" ON s1."Table1"(name);
 
     CREATE SCHEMA s2;
-    CREATE TABLE s2.table1 (
+    CREATE TABLE s2."Table1" (
       id integer PRIMARY KEY, 
       name varchar(32),
       url varchar(200)
     );
-    CREATE INDEX ON s2.table1(url);
-"
+    CREATE INDEX Table1NameIx ON s2."Table1"(name); -- index name stored as lower case
+    CREATE INDEX ON s2."Table1"(url);
+'
 
 echo
 echo "# Compare the indexes between two schemas in the same database"
 echo "# Expect SQL (pseudocode):"
-echo "#   Add index on s2.table1.name"
-echo "#   Drop index on s2.table1.url"
+echo "#   Drop s2.table1nameix"
+echo "#   Add s2.Table1NameIx"
+echo "#   Drop lower-case index on s2.Table1.url"
 echo
 
 ../pgdiff -U "u1" -W "asdf" -H "localhost" -D "db1" -S "s1" -O "sslmode=disable" \
@@ -44,27 +46,27 @@ echo
 echo ==========================================================
 echo
 
-
 #
 # Compare the indexes in all schemas between two databases
 #
-./populate-db.sh db2 "
+./populate-db.sh db2 '
     CREATE SCHEMA s1;
-    CREATE TABLE s1.table1 (
+    CREATE TABLE s1."Table1" (
       id integer PRIMARY KEY,
       name varchar(32),
       url varchar(200)
     );
-    CREATE INDEX ON s1.table1(name);
-    CREATE INDEX ON s1.table1(url);
+    CREATE INDEX "Table1NameIx" ON s1."Table1"(name);
+    CREATE INDEX ON s1."Table1"(url);
 
     CREATE SCHEMA s2;
-    CREATE TABLE s2.table1 (
+    CREATE TABLE s2."Table1" (
       id integer PRIMARY KEY, 
       name varchar(32),
       url varchar(200)
     );
-"
+    CREATE INDEX Table1NameIx ON s2."Table1"(name); -- index name stored as lower case 
+'
 
 echo
 echo "# Compare the indexes in all schemas between two databases"

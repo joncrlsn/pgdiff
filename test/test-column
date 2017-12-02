@@ -19,14 +19,14 @@ echo ==============================================================
         name varchar(50)
     );
     CREATE TABLE s1.table10 (id bigint);
-    CREATE TABLE s1.table11 ();
+    CREATE TABLE s1.table11 (name varchar(32));
     
     CREATE SCHEMA s2;
     CREATE TABLE s2.table9 (  -- Add name column 
         id integer
     ); 
     CREATE TABLE s2.table10 (id integer); -- change id to bigint
-    CREATE TABLE s2.table11 (id integer); -- drop id column
+    CREATE TABLE s2.table11 (id integer, name varchar(24)); -- drop id column and resize name
 "
 
 echo
@@ -35,6 +35,7 @@ echo "# Expect SQL:"
 echo "#   Add s2.table9.name"
 echo "#   Change s2.table10.id to bigint"
 echo "#   Drop s2.table11.id"
+echo "#   Change length of s2.table11.name"
 
 echo
 ../pgdiff -U "u1" -W "asdf" -H "localhost" -D "db1" -S "s1" -O "sslmode=disable" \
