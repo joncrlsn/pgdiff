@@ -142,10 +142,10 @@ func (c *IndexSchema) Add() {
 	}
 
 	// If we are comparing two different schemas against each other, we need to do some
-	// modification of the first index_def so we create the index in the write schema
+	// modification of the first index_def so we create the index in the right schema
 	indexDef := c.get("index_def")
 	if dbInfo1.DbSchema != dbInfo2.DbSchema {
-		indexDef = modifySchema(indexDef, c.get("schema_name"), dbInfo2.DbSchema, c.get("table_name"))
+		indexDef = modifySchema(indexDef, "ON", c.get("schema_name"), dbInfo2.DbSchema, c.get("table_name"))
 	}
 
 	fmt.Printf("%s;\n", indexDef)
@@ -233,8 +233,8 @@ func (c *IndexSchema) Change(obj interface{}) {
 	indexDef2 := c2.get("index_def")
 
 	if dbInfo1.DbSchema != dbInfo2.DbSchema {
-		indexDef1 = modifySchema(indexDef1, dbInfo1.DbSchema, dbInfo2.DbSchema, c.get("table_name"))
-		indexDef2 = quoteSchemaAndTable(indexDef2, dbInfo2.DbSchema, c.get("table_name"))
+		indexDef1 = modifySchema(indexDef1, "ON", dbInfo1.DbSchema, dbInfo2.DbSchema, c.get("table_name"))
+		indexDef2 = quoteSchemaAndObject(indexDef2, "ON", dbInfo2.DbSchema, c.get("table_name"))
 	}
 
 	if indexDef1 != indexDef2 {
