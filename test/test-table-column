@@ -1,0 +1,82 @@
+#!/bin/bash
+#
+# Useful for visually inspecting the output SQL to verify it is doing what it should
+#
+
+source ./start-fresh.sh >/dev/null
+
+echo
+echo ==============================================================
+
+#
+# Compare the table columns between two schemas in the same database
+#
+#psql -U u1 -h localhost -d db1 <<'EOS'
+./populate-db.sh db1 "
+    CREATE SCHEMA s1;
+    CREATE TABLE s1.table9 (
+        id integer,
+        name varchar(50)
+    );
+    CREATE TABLE s1.table10 (id bigint);
+    CREATE TABLE s1.table11 ();
+
+    CREATE SCHEMA s2;
+    CREATE TABLE s2.table9 (  -- Add name column
+        id integer
+    );
+    CREATE TABLE s2.table10 (id integer); -- change id to bigint
+    CREATE TABLE s2.table11 (id integer); -- drop id column
+    CREATE OR REPLACE VIEW s1.view1 AS
+        SELECT *
+        FROM s1.table10;
+"
+
+echo
+echo "# Compare the columns between two schemas in the same database"
+echo "# Expect SQL:"
+echo "#   Add s2.table9.name"
+echo "#   Change s2.table10.id to bigint"
+echo "#   Drop s2.table11.id"
+
+echo
+../pgdiff -U "u1" -W "asdf" -H "localhost" -D "db1" -S "s1" -O "sslmode=disable" \
+          -u "u1" -w "asdf" -h "localhost" -d "db1" -s "s2" -o "sslmode=disable" \
+          TABLE_COLUMN | grep -v '^-- '
+
+
+echo
+echo ==============================================================
+
+./populate-db.sh db2 "
+    CREATE SCHEMA s1;
+    CREATE TABLE s1.table9 (
+        id integer,
+        name varchar(40)
+    );
+    CREATE TABLE s1.table10 ();
+    CREATE TABLE s1.table11 (dropme integer);
+
+    CREATE SCHEMA s2;
+    CREATE TABLE s2.table9 (  -- Add name column
+        id integer
+    );
+    CREATE TABLE s2.table10 (id integer); -- change id to bigint
+    CREATE TABLE s2.table11 (id integer); -- drop id column
+    CREATE OR REPLACE VIEW s1.view1 AS
+        SELECT *
+        FROM s1.table10;
+"
+
+echo
+echo "# Compare the table columns in all schemas between two databases"
+echo "# Expect:"
+echo "#   Change s1.table9.name to varchar(50) "
+echo "#   Add s1.table10.id"
+echo "#   Drop s1.table11.dropme"
+echo
+
+../pgdiff -U "u1" -W "asdf" -H "localhost" -D "db1" -S "*" -O "sslmode=disable" \
+          -u "u1" -w "asdf" -h "localhost" -d "db2" -s "*" -o "sslmode=disable" \
+          TABLE_COLUMN | grep -v '^-- '
+echo

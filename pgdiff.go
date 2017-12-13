@@ -121,6 +121,8 @@ func main() {
 		compareTables(conn1, conn2)
 	} else if schemaType == "COLUMN" {
 		compareColumns(conn1, conn2)
+	} else if schemaType == "TABLE_COLUMN" {
+		compareTableColumns(conn1, conn2)
 	} else if schemaType == "INDEX" {
 		compareIndexes(conn1, conn2)
 	} else if schemaType == "VIEW" {
@@ -203,7 +205,7 @@ Options:
   -S, --schema1 : first schema.  default is all schemas
   -s, --schema2 : second schema. default is all schemas
 
-<schemaTpe> can be: SCHEMA ROLE, SEQUENCE, TABLE, VIEW, COLUMN, INDEX, FOREIGN_KEY, OWNER, GRANT_RELATIONSHIP, GRANT_ATTRIBUTE
+<schemaTpe> can be: SCHEMA ROLE, SEQUENCE, TABLE, VIEW, COLUMN, TABLE_COLUMN, INDEX, FOREIGN_KEY, OWNER, GRANT_RELATIONSHIP, GRANT_ATTRIBUTE
 `)
 
 	os.Exit(2)
