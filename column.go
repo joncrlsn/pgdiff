@@ -155,11 +155,11 @@ func (c *ColumnSchema) Add() {
 		schema = c.get("table_schema")
 	}
 
-    // Knowing the version of db2 would eliminate the need for this warning
-    if c.get("is_identity") == "YES" {
-        fmt.Println("-- WARNING: identity columns are not supported in PostgreSQL versions < 10.")
-        fmt.Println("-- Attempting to create identity columns in earlier versions will probably result in errors.")
-    }
+	// Knowing the version of db2 would eliminate the need for this warning
+	if c.get("is_identity") == "YES" {
+		fmt.Println("-- WARNING: identity columns are not supported in PostgreSQL versions < 10.")
+		fmt.Println("-- Attempting to create identity columns in earlier versions will probably result in errors.")
+	}
 
 	if c.get("data_type") == "character varying" {
 		maxLength, valid := getMaxLength(c.get("character_maximum_length"))
@@ -181,11 +181,11 @@ func (c *ColumnSchema) Add() {
 	if c.get("column_default") != "null" {
 		fmt.Printf(" DEFAULT %s", c.get("column_default"))
 	}
-    // NOTE: there are more identity column sequence options according to the PostgreSQL 
-    // CREATE TABLE docs, but these do not appear to be available as of version 10.1
-    if c.get("is_identity") == "YES" {
-        fmt.Printf(" GENERATED %s AS IDENTITY", c.get("identity_generation"))
-    }
+	// NOTE: there are more identity column sequence options according to the PostgreSQL 
+	// CREATE TABLE docs, but these do not appear to be available as of version 10.1
+	if c.get("is_identity") == "YES" {
+		fmt.Printf(" GENERATED %s AS IDENTITY", c.get("identity_generation"))
+	}
 	fmt.Printf(";\n")
 }
 
@@ -250,39 +250,39 @@ func (c *ColumnSchema) Change(obj interface{}) {
 		fmt.Printf("ALTER TABLE %s.%s ALTER COLUMN %s SET DEFAULT %s;\n", c2.get("table_schema"), c.get("table_name"), c.get("column_name"), c.get("column_default"))
 	}
 
-    // Detect identity column change
-    // Save result to variable instead of printing because order for adding/removing
-    // is_nullable affects identity columns
-    var identitySql string
-    if c.get("is_identity") != c2.get("is_identity") {
-        // Knowing the version of db2 would eliminate the need for this warning
-        fmt.Println("-- WARNING: identity columns are not supported in PostgreSQL versions < 10.")
-        fmt.Println("-- Attempting to create identity columns in earlier versions will probably result in errors.")
-        if c.get("is_identity") == "YES" {
-            identitySql = fmt.Sprintf("ALTER TABLE \"%s\".\"%s\" ALTER COLUMN \"%s\" ADD GENERATED %s AS IDENTITY;\n", c2.get("table_schema"), c.get("table_name"), c.get("column_name"), c.get("identity_generation"))
-        } else {
-            identitySql = fmt.Sprintf("ALTER TABLE \"%s\".\"%s\" ALTER COLUMN \"%s\" DROP IDENTITY;\n", c2.get("table_schema"), c.get("table_name"), c.get("column_name"))
-        }
-    }
+	// Detect identity column change
+	// Save result to variable instead of printing because order for adding/removing
+	// is_nullable affects identity columns
+	var identitySql string
+	if c.get("is_identity") != c2.get("is_identity") {
+		// Knowing the version of db2 would eliminate the need for this warning
+		fmt.Println("-- WARNING: identity columns are not supported in PostgreSQL versions < 10.")
+		fmt.Println("-- Attempting to create identity columns in earlier versions will probably result in errors.")
+		if c.get("is_identity") == "YES" {
+			identitySql = fmt.Sprintf("ALTER TABLE \"%s\".\"%s\" ALTER COLUMN \"%s\" ADD GENERATED %s AS IDENTITY;\n", c2.get("table_schema"), c.get("table_name"), c.get("column_name"), c.get("identity_generation"))
+		} else {
+			identitySql = fmt.Sprintf("ALTER TABLE \"%s\".\"%s\" ALTER COLUMN \"%s\" DROP IDENTITY;\n", c2.get("table_schema"), c.get("table_name"), c.get("column_name"))
+		}
+	}
 
 	// Detect not-null and nullable change
 	if c.get("is_nullable") != c2.get("is_nullable") {
 		if c.get("is_nullable") == "YES" {
-            if identitySql != "" {
-                fmt.Printf(identitySql)
-            }
+			if identitySql != "" {
+				fmt.Printf(identitySql)
+			}
 			fmt.Printf("ALTER TABLE %s.%s ALTER COLUMN %s DROP NOT NULL;\n", c2.get("table_schema"), c.get("table_name"), c.get("column_name"))
 		} else {
 			fmt.Printf("ALTER TABLE %s.%s ALTER COLUMN %s SET NOT NULL;\n", c2.get("table_schema"), c.get("table_name"), c.get("column_name"))
-            if identitySql != "" {
-                fmt.Printf(identitySql)
-            }
+			if identitySql != "" {
+				fmt.Printf(identitySql)
+			}
 		}
 	} else {
-        if identitySql != "" {
-            fmt.Printf(identitySql)
-        }
-    }
+		if identitySql != "" {
+			fmt.Printf(identitySql)
+		}
+	}
 }
 
 // ==================================
