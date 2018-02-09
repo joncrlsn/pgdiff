@@ -35,7 +35,21 @@ SELECT table_schema
     , character_maximum_length
     , is_identity
     , identity_generation
-FROM information_schema.columns 
+	, substring(udt_name from 2) AS array_type
+	, attndims AS array_dimensions
+FROM information_schema.columns
+JOIN (SELECT attname
+		, attndims
+		, relname
+		, nspname
+	FROM pg_attribute
+	JOIN pg_class
+	ON attrelid = pg_class.oid
+	JOIN pg_namespace
+	ON pg_class.relnamespace = pg_namespace.oid) s
+ON (table_name = s.relname
+	AND column_name = s.attname
+	AND table_schema = s.nspname)
 WHERE is_updatable = 'YES'
 {{if eq $.DbSchema "*" }}
 AND table_schema NOT LIKE 'pg_%' 
@@ -132,10 +146,17 @@ func (c *ColumnSchema) Add() {
 			fmt.Printf("ALTER TABLE %s.%s ADD COLUMN %s character varying(%s)", schema, c.get("table_name"), c.get("column_name"), maxLength)
 		}
 	} else {
-		if c.get("data_type") == "ARRAY" {
-			fmt.Println("-- Note that adding of array data types are not yet generated properly.")
+		dataType := c.get("data_type")
+		//if c.get("data_type") == "ARRAY" {
+			//fmt.Println("-- Note that adding of array data types are not yet generated properly.")
+		//}
+		if dataType == "ARRAY" {
+			dimensions, err := strconv.Atoi(c.get("array_dimensions"))
+			check("converting string to int", err)
+			dataType = getArrayDefinition(c.get("array_type"), dimensions)
 		}
-		fmt.Printf("ALTER TABLE %s.%s ADD COLUMN %s %s", schema, c.get("table_name"), c.get("column_name"), c.get("data_type"))
+		//fmt.Printf("ALTER TABLE %s.%s ADD COLUMN %s %s", schema, c.get("table_name"), c.get("column_name"), c.get("data_type"))
+		fmt.Printf("ALTER TABLE %s.%s ADD COLUMN %s %s", schema, c.get("table_name"), c.get("column_name"), dataType)
 	}
 
 	if c.get("is_nullable") == "NO" {
@@ -294,4 +315,8 @@ func getMaxLength(maxLength string) (string, bool) {
 		return "1024", false
 	}
 	return maxLength, true
+}
+
+func getArrayDefinition(arrayType string, dimensions int) string {
+	return arrayType + strings.Repeat("[]", dimensions)
 }
