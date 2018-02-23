@@ -183,7 +183,7 @@ func (c *ColumnSchema) Change(obj interface{}) {
 
 	// Detect column type change (mostly varchar length, or number size increase)
 	// (integer to/from bigint is OK)
-	if dataType1 != dataType2 {
+	if dataType1 == dataType2 {
 		if dataType1 == "character varying" {
 			max1, max1Valid := getMaxLength(c.get("character_maximum_length"))
 			max2, max2Valid := getMaxLength(c2.get("character_maximum_length"))

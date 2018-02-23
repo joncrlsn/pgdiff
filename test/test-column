@@ -81,13 +81,13 @@ echo ==============================================================
     CREATE TABLE s3.table12 (
         ids integer[],
 		bigids bigint[],
-		something text[][]
+		something text[][] -- dimensions don't seem to matter, to ignore them
     );
 
 	CREATE SCHEMA s4;
-    CREATE TABLE s4.table12 (
-		bigids integer[],
-		something text
+    CREATE TABLE s4.table12 ( -- add ids column
+		bigids integer[], -- change bigids to int8[]
+		something text[] -- no change
 	);
 "
 
@@ -96,7 +96,6 @@ echo "# Compare array columns between two tables"
 echo "# Expect:"
 echo "#   Add s4.table12.ids int4[]"
 echo "#   Change s4.table12.bigids from to int8[]"
-echo "#   Change s4.table12.something to text[]"
 echo
 
 ../pgdiff -U "u1" -W "asdf" -H "localhost" -D "db1" -S "s3" -O "sslmode=disable" \
