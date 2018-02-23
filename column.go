@@ -312,6 +312,3 @@ func getMaxLength(maxLength string) (string, bool) {
 	return maxLength, true
 }
 
-func getArrayDefinition(arrayType string, dimensions int) string {
-	return arrayType + strings.Repeat("[]", dimensions)
-}
