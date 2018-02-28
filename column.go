@@ -35,7 +35,7 @@ SELECT table_schema
     , character_maximum_length
     , is_identity
     , identity_generation
-	, substring(udt_name from 2) AS array_type
+    , substring(udt_name from 2) AS array_type
 FROM information_schema.columns
 WHERE is_updatable = 'YES'
 {{if eq $.DbSchema "*" }}
