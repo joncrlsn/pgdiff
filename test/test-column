@@ -81,7 +81,7 @@ echo ==============================================================
     CREATE TABLE s3.table12 (
         ids integer[],
 		bigids bigint[],
-		something text[][] -- dimensions don't seem to matter, to ignore them
+		something text[][] -- dimensions don't seem to matter, so ignore them
     );
 
 	CREATE SCHEMA s4;
