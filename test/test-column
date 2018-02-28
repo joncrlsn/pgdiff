@@ -77,18 +77,17 @@ echo
 echo ==============================================================
 
 ./populate-db.sh db1 "
-	CREATE SCHEMA s3;
+    CREATE SCHEMA s3;
     CREATE TABLE s3.table12 (
         ids integer[],
-		bigids bigint[],
-		something text[][] -- dimensions don't seem to matter, so ignore them
+        bigids bigint[],
+        something text[][] -- dimensions don't seem to matter, so ignore them
     );
-
-	CREATE SCHEMA s4;
+    CREATE SCHEMA s4;
     CREATE TABLE s4.table12 ( -- add ids column
-		bigids integer[], -- change bigids to int8[]
-		something text[] -- no change
-	);
+        bigids integer[], -- change bigids to int8[]
+        something text[] -- no change
+    );
 "
 
 echo
