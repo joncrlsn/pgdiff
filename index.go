@@ -154,10 +154,10 @@ func (c *IndexSchema) Add() {
 		// Create the constraint using the index we just created
 		if c.get("pk") == "true" {
 			// Add primary key using the index
-			fmt.Printf("ALTER TABLE \"%s\".\"%s\" ADD CONSTRAINT \"%s\" PRIMARY KEY USING INDEX \"%s\"; -- (1)\n", schema, c.get("table_name"), c.get("index_name"), c.get("index_name"))
+			fmt.Printf("ALTER TABLE %q.%q ADD CONSTRAINT %q PRIMARY KEY USING INDEX %q; -- (1)\n", schema, c.get("table_name"), c.get("index_name"), c.get("index_name"))
 		} else if c.get("uq") == "true" {
 			// Add unique constraint using the index
-			fmt.Printf("ALTER TABLE \"%s\".\"%s\" ADD CONSTRAINT \"%s\" UNIQUE USING INDEX \"%s\"; -- (2)\n", schema, c.get("table_name"), c.get("index_name"), c.get("index_name"))
+			fmt.Printf("ALTER TABLE %q.%q ADD CONSTRAINT %q UNIQUE USING INDEX %q; -- (2)\n", schema, c.get("table_name"), c.get("index_name"), c.get("index_name"))
 		}
 	}
 }
@@ -166,9 +166,9 @@ func (c *IndexSchema) Add() {
 func (c *IndexSchema) Drop() {
 	if c.get("constraint_def") != "null" {
 		fmt.Println("-- Warning, this may drop foreign keys pointing at this column.  Make sure you re-run the FOREIGN_KEY diff after running this SQL.")
-		fmt.Printf("ALTER TABLE \"%s\".\"%s\" DROP CONSTRAINT \"%s\" CASCADE; -- %s\n", c.get("schema_name"), c.get("table_name"), c.get("index_name"))
+		fmt.Printf("ALTER TABLE %q.%q DROP CONSTRAINT %q CASCADE; -- %s\n", c.get("schema_name"), c.get("table_name"), c.get("index_name"))
 	}
-	fmt.Printf("DROP INDEX \"%s\".\"%s\";\n", c.get("schema_name"), c.get("index_name"))
+	fmt.Printf("DROP INDEX %q.%q;\n", c.get("schema_name"), c.get("index_name"))
 }
 
 // Change handles the case where the table and column match, but the details do not
@@ -196,7 +196,7 @@ func (c *IndexSchema) Change(obj interface{}) {
 		if c.get("constraint_def") == "null" {
 			// c1.constraint does not exist, c2.constraint does, so
 			// Drop constraint
-			fmt.Printf("DROP INDEX \"%s\".\"%s\"; -- %s \n", c2.get("schema_name"), c2.get("index_name"), c2.get("index_def"))
+			fmt.Printf("DROP INDEX %q.%q; -- %s \n", c2.get("schema_name"), c2.get("index_name"), c2.get("index_def"))
 		} else if c2.get("constraint_def") == "null" {
 			// c1.constraint exists, c2.constraint does not, so
 			// Add constraint
@@ -205,20 +205,20 @@ func (c *IndexSchema) Change(obj interface{}) {
 				// Add constraint using the index
 				if c.get("pk") == "true" {
 					// Add primary key using the index
-					fmt.Printf("ALTER TABLE \"%s\".\"%s\" ADD CONSTRAINT \"%s\" PRIMARY KEY USING INDEX \"%s\"; -- (3)\n", c2.get("schema_name"), c.get("table_name"), c.get("index_name"), c.get("index_name"))
+					fmt.Printf("ALTER TABLE %q.%q ADD CONSTRAINT %q PRIMARY KEY USING INDEX %q; -- (3)\n", c2.get("schema_name"), c.get("table_name"), c.get("index_name"), c.get("index_name"))
 				} else if c.get("uq") == "true" {
 					// Add unique constraint using the index
-					fmt.Printf("ALTER TABLE \"%s\".\"%s\" ADD CONSTRAINT \"%s\" UNIQUE USING INDEX \"%s\"; -- (4)\n", c2.get("schema_name"), c.get("table_name"), c.get("index_name"), c.get("index_name"))
+					fmt.Printf("ALTER TABLE %q.%q ADD CONSTRAINT %q UNIQUE USING INDEX %q; -- (4)\n", c2.get("schema_name"), c.get("table_name"), c.get("index_name"), c.get("index_name"))
 				} else {
 
 				}
 			} else {
 				// Drop the c2 index, create a copy of the c1 index
-				fmt.Printf("DROP INDEX \"%s\".\"%s\"; -- %s \n", c2.get("schema_name"), c2.get("index_name"), c2.get("index_def"))
+				fmt.Printf("DROP INDEX %q.%q; -- %s \n", c2.get("schema_name"), c2.get("index_name"), c2.get("index_def"))
 			}
 			// WIP
 			fmt.Println("-- Need feedback on whether this is right or not")
-			fmt.Printf("ALTER TABLE \"%s\".\"%s\" ADD CONSTRAINT \"%s\" %s;\n", c2.get("schema_name"), c.get("table_name"), c.get("index_name"), c.get("constraint_def"))
+			fmt.Printf("ALTER TABLE %q.%q ADD CONSTRAINT %q %s;\n", c2.get("schema_name"), c.get("table_name"), c.get("index_name"), c.get("constraint_def"))
 
 		} else if c.get("index_def") != c2.get("index_def") {
 			// The constraints match

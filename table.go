@@ -111,13 +111,13 @@ func (c TableSchema) Add() {
 	if schema == "*" {
 		schema = c.get("table_schema")
 	}
-	fmt.Printf("CREATE %s \"%s\".\"%s\"();", c.get("table_type"), schema, c.get("table_name"))
+	fmt.Printf("CREATE %s %q.%q();", c.get("table_type"), schema, c.get("table_name"))
 	fmt.Println()
 }
 
 // Drop returns SQL to drop the table or view
 func (c TableSchema) Drop() {
-	fmt.Printf("DROP %s \"%s\".\"%s\";\n", c.get("table_type"), c.get("table_schema"), c.get("table_name"))
+	fmt.Printf("DROP %s %q.%q;\n", c.get("table_type"), c.get("table_schema"), c.get("table_name"))
 }
 
 // Change handles the case where the table and column match, but the details do not
