@@ -33,14 +33,15 @@ func initTriggerSqlTemplate() *template.Template {
     FROM pg_catalog.pg_trigger t
     INNER JOIN pg_catalog.pg_class c ON (c.oid = t.tgrelid)
     INNER JOIN pg_catalog.pg_namespace n ON (n.oid = c.relnamespace)
-	WHERE true
+    WHERE true
+    AND t.tgname NOT LIKE 'RI_ConstraintTrigger%' -- hat tip to David-Angel
     {{if eq $.DbSchema "*" }}
     AND n.nspname NOT LIKE 'pg_%' 
     AND n.nspname <> 'information_schema' 
     {{else}}
     AND n.nspname = '{{$.DbSchema}}'
     {{end}}
-	`
+    `
 	t := template.New("TriggerSqlTmpl")
 	template.Must(t.Parse(sql))
 	return t
