@@ -32,7 +32,7 @@ SELECT n.nspname AS schema_name
         WHEN c.relkind = 'v' THEN 'VIEW' 
         ELSE c.relkind::varchar END AS type
 FROM pg_class AS c
-INNER JOIN pg_authid AS a ON (a.oid = c.relowner)
+INNER JOIN pg_roles AS a ON (a.oid = c.relowner)
 INNER JOIN pg_namespace AS n ON (n.oid = c.relnamespace)
 WHERE c.relkind IN ('r', 'S', 'v')
 {{if eq $.DbSchema "*" }}
