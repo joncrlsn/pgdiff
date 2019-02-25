@@ -203,8 +203,7 @@ Options:
   -S, --schema1 : first schema.  default is all schemas
   -s, --schema2 : second schema. default is all schemas
 
-<schemaTpe> can be: SCHEMA ROLE, SEQUENCE, TABLE, VIEW, COLUMN, INDEX, FOREIGN_KEY, OWNER, GRANT_RELATIONSHIP, GRANT_ATTRIBUTE
-`)
+<schemaTpe> can be: ALL, SCHEMA, ROLE, SEQUENCE, TABLE, VIEW, COLUMN, INDEX, FOREIGN_KEY, OWNER, GRANT_RELATIONSHIP, GRANT_ATTRIBUTE, TRIGGER, FUNCTION`)
 
 	os.Exit(2)
 }
