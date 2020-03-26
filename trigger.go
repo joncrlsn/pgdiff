@@ -33,7 +33,7 @@ func initTriggerSqlTemplate() *template.Template {
     FROM pg_catalog.pg_trigger t
     INNER JOIN pg_catalog.pg_class c ON (c.oid = t.tgrelid)
     INNER JOIN pg_catalog.pg_namespace n ON (n.oid = c.relnamespace)
-	WHERE true
+	WHERE not t.tgisinternal
     {{if eq $.DbSchema "*" }}
     AND n.nspname NOT LIKE 'pg_%' 
     AND n.nspname <> 'information_schema' 
@@ -106,8 +106,6 @@ func (c *TriggerSchema) Compare(obj interface{}) int {
 
 // Add returns SQL to create the trigger
 func (c TriggerSchema) Add() {
-	fmt.Println("-- Add")
-
 	// If we are comparing two different schemas against each other, we need to do some
 	// modification of the first trigger definition so we create it in the right schema
 	triggerDef := c.get("trigger_def")
@@ -131,7 +129,6 @@ func (c TriggerSchema) Drop() {
 
 // Change handles the case where the trigger names match, but the definition does not
 func (c TriggerSchema) Change(obj interface{}) {
-	fmt.Println("-- Change")
 	c2, ok := obj.(*TriggerSchema)
 	if !ok {
 		fmt.Println("Error!!!, Change needs a TriggerSchema instance", c2)
