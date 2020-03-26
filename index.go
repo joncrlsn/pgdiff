@@ -196,7 +196,7 @@ func (c *IndexSchema) Change(obj interface{}) {
 
 	if c.get("constraint_def") != c2.get("constraint_def") {
 		// c1.constraint and c2.constraint are just different
-		fmt.Printf("-- CHANGE: Different defs:\n--    %s\n--    %s\n", c.get("constraint_def"), c2.get("constraint_def"))
+		fmt.Printf("-- CHANGE: Different defs on %s:\n--    %s\n--    %s\n", c.get("table_name"), c.get("constraint_def"), c2.get("constraint_def"))
 		if c.get("constraint_def") == "null" {
 			// c1.constraint does not exist, c2.constraint does, so
 			// Drop constraint
