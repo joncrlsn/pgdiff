@@ -26,7 +26,7 @@ var (
 func initColumnSqlTemplate() *template.Template {
 	sql := `
 SELECT table_schema
-    , {{if eq $.DbSchema "*" }}table_schema || '.' || {{end}}table_name || '.' || column_name  AS compare_name
+    ,  {{if eq $.DbSchema "*" }}table_schema || '.' || {{end}}table_name || '.' ||lpad(cast (ordinal_position as varchar), 5, '0')|| column_name AS compare_name
 	, table_name
     , column_name
     , data_type
