@@ -76,7 +76,7 @@ func (c *MatViewSchema) Compare(obj interface{}) int {
 
 // Add returns SQL to create the matview
 func (c MatViewSchema) Add() {
-	fmt.Printf("CREATE MATERIALIZED VIEW %s AS %s \n\n", c.get("matviewname"), c.get("definition"))
+	fmt.Printf("CREATE OR REPLACE MATERIALIZED VIEW %s AS %s \n\n%s \n\n", c.get("matviewname"), c.get("definition"), c.get("indexdef"))
 }
 
 // Drop returns SQL to drop the matview
@@ -91,19 +91,28 @@ func (c MatViewSchema) Change(obj interface{}) {
 		fmt.Println("Error!!!, Change needs a MatViewSchema instance", c2)
 	}
 	if c.get("definition") != c2.get("definition") {
-		fmt.Printf("DROP MATERIALIZED VIEW %s;\n", c.get("matviewname"))
-		fmt.Printf("CREATE MATERIALIZED VIEW %s AS %s \n\n", c.get("matviewname"), c.get("definition"))
+		fmt.Printf("DROP MATERIALIZED VIEW %s;\n\n", c.get("matviewname"))
+		fmt.Printf("CREATE OR REPLACE MATERIALIZED VIEW %s AS %s \n\n%s \n\n", c.get("matviewname"), c.get("definition"), c.get("indexdef"))
 	}
 }
 
 // compareMatViews outputs SQL to make the matviews match between DBs
 func compareMatViews(conn1 *sql.DB, conn2 *sql.DB) {
 	sql := `
-	SELECT schemaname || '.' || matviewname AS matviewname
-	, definition 
-	FROM pg_matviews 
+	WITH matviews as ( SELECT schemaname || '.' || matviewname AS matviewname,
+	definition
+	FROM pg_catalog.pg_matviews 
 	WHERE schemaname NOT LIKE 'pg_%' 
-	ORDER BY matviewname;
+	)
+	SELECT
+	matviewname,
+	definition,
+	string_agg(indexdef, ';' || E'\n\n') || ';' as indexdef
+	FROM matviews
+	LEFT JOIN  pg_catalog.pg_indexes on matviewname = schemaname || '.' || tablename
+	group by matviewname, definition
+	ORDER BY
+	matviewname;
 	`
 
 	rowChan1, _ := pgutil.QueryStrings(conn1, sql)
