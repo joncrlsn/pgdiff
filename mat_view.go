@@ -76,7 +76,7 @@ func (c *MatViewSchema) Compare(obj interface{}) int {
 
 // Add returns SQL to create the matview
 func (c MatViewSchema) Add() {
-	fmt.Printf("CREATE OR REPLACE MATERIALIZED VIEW %s AS %s \n\n%s \n\n", c.get("matviewname"), c.get("definition"), c.get("indexdef"))
+	fmt.Printf("CREATE MATERIALIZED VIEW %s AS %s \n\n%s \n\n", c.get("matviewname"), c.get("definition"), c.get("indexdef"))
 }
 
 // Drop returns SQL to drop the matview
@@ -92,7 +92,7 @@ func (c MatViewSchema) Change(obj interface{}) {
 	}
 	if c.get("definition") != c2.get("definition") {
 		fmt.Printf("DROP MATERIALIZED VIEW %s;\n\n", c.get("matviewname"))
-		fmt.Printf("CREATE OR REPLACE MATERIALIZED VIEW %s AS %s \n\n%s \n\n", c.get("matviewname"), c.get("definition"), c.get("indexdef"))
+		fmt.Printf("CREATE MATERIALIZED VIEW %s AS %s \n\n%s \n\n", c.get("matviewname"), c.get("definition"), c.get("indexdef"))
 	}
 }
 
@@ -107,7 +107,7 @@ func compareMatViews(conn1 *sql.DB, conn2 *sql.DB) {
 	SELECT
 	matviewname,
 	definition,
-	string_agg(indexdef, ';' || E'\n\n') || ';' as indexdef
+	COALESCE(string_agg(indexdef, ';' || E'\n\n') || ';', '')  as indexdef
 	FROM matviews
 	LEFT JOIN  pg_catalog.pg_indexes on matviewname = schemaname || '.' || tablename
 	group by matviewname, definition
