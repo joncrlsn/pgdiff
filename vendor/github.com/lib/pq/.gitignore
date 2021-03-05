@@ -1,0 +1,7 @@
+.db
+*.test
+*~
+*.swp
+.idea
+.vscode
+vendor/
