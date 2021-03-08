@@ -75,6 +75,7 @@ rundiff SCHEMA
 rundiff SEQUENCE
 rundiff TABLE
 rundiff COLUMN
+rundiff MATVIEW
 rundiff INDEX
 rundiff VIEW
 rundiff TRIGGER
@@ -85,4 +86,3 @@ rundiff GRANT_ATTRIBUTE
 
 echo
 echo "Done!"
-
