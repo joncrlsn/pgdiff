@@ -35,6 +35,7 @@ Schema type ordering:
 1. OWNER
 1. GRANT\_RELATIONSHIP
 1. GRANT\_ATTRIBUTE
+1. ALL (all above in one run)
 
 
 ### example
