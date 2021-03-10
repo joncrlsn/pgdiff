@@ -50,6 +50,43 @@ ORDER BY compare_name ASC;
 	return t
 }
 
+var (
+	tableColumnSqlTemplate = initTableColumnSqlTemplate()
+)
+
+// Initializes the Sql template
+func initTableColumnSqlTemplate() *template.Template {
+	sql := `
+SELECT a.table_schema
+    , {{if eq $.DbSchema "*" }}a.table_schema || '.' || {{end}}a.table_name || '.' || column_name  AS compare_name
+	, a.table_name
+    , column_name
+    , data_type
+    , is_nullable
+    , column_default
+    , character_maximum_length
+FROM information_schema.columns a
+INNER JOIN information_schema.tables b
+    ON a.table_schema = b.table_schema AND
+       a.table_name = b.table_name AND
+       b.table_type = 'BASE TABLE'
+WHERE is_updatable = 'YES'
+{{if eq $.DbSchema "*" }}
+AND a.table_schema NOT LIKE 'pg_%' 
+AND a.table_schema <> 'information_schema' 
+{{else}}
+AND a.table_schema = '{{$.DbSchema}}'
+{{end}}
+{{ if $.TableType }}
+AND b.table_type = '{{ $.TableType }}'
+{{ end }}
+ORDER BY compare_name ASC;
+`
+	t := template.New("ColumnSqlTmpl")
+	template.Must(t.Parse(sql))
+	return t
+}
+
 // ==================================
 // Column Rows definition
 // ==================================
@@ -252,14 +289,13 @@ func (c *ColumnSchema) Change(obj interface{}) {
 // Standalone Functions
 // ==================================
 
-// compareColumns outputs SQL to make the columns match between two databases or schemas
-func compareColumns(conn1 *sql.DB, conn2 *sql.DB) {
-
+// compare outputs SQL to make the columns match between two databases or schemas
+func compare(conn1 *sql.DB, conn2 *sql.DB, tpl *template.Template) {
 	buf1 := new(bytes.Buffer)
-	columnSqlTemplate.Execute(buf1, dbInfo1)
+	tpl.Execute(buf1, dbInfo1)
 
 	buf2 := new(bytes.Buffer)
-	columnSqlTemplate.Execute(buf2, dbInfo2)
+	tpl.Execute(buf2, dbInfo2)
 
 	rowChan1, _ := pgutil.QueryStrings(conn1, buf1.String())
 	rowChan2, _ := pgutil.QueryStrings(conn2, buf2.String())
@@ -284,6 +320,21 @@ func compareColumns(conn1 *sql.DB, conn2 *sql.DB) {
 
 	// Compare the columns
 	doDiff(schema1, schema2)
+
+}
+
+// compareColumns outputs SQL to make the columns match between two databases or schemas
+func compareColumns(conn1 *sql.DB, conn2 *sql.DB) {
+
+    compare(conn1, conn2, columnSqlTemplate)
+
+}
+
+// compareColumns outputs SQL to make the tables columns (without views columns) match between two databases or schemas
+func compareTableColumns(conn1 *sql.DB, conn2 *sql.DB) {
+
+    compare(conn1, conn2, tableColumnSqlTemplate)
+
 }
 
 // getMaxLength returns the maximum length and whether or not it is valid
