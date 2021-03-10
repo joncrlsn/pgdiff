@@ -6,13 +6,18 @@
 
 package main
 
-import "fmt"
-import "log"
-import flag "github.com/ogier/pflag"
-import "os"
-import "strings"
-import _ "github.com/lib/pq"
-import "github.com/joncrlsn/pgutil"
+import (
+	"fmt"
+	"log"
+
+	"os"
+	"strings"
+
+	flag "github.com/ogier/pflag"
+
+	"github.com/joncrlsn/pgutil"
+	_ "github.com/lib/pq"
+)
 
 // Schema is a database definition (table, column, constraint, indes, role, etc) that can be
 // added, dropped, or changed to match another database.
@@ -67,7 +72,7 @@ func main() {
 	}
 
 	if len(args) == 0 {
-		fmt.Println("The required first argument is SchemaType: SCHEMA, ROLE, SEQUENCE, TABLE, VIEW, COLUMN, INDEX, FOREIGN_KEY, OWNER, GRANT_RELATIONSHIP, GRANT_ATTRIBUTE")
+		fmt.Println("The required first argument is SchemaType: SCHEMA, ROLE, SEQUENCE, TABLE, VIEW, MATVIEW, COLUMN, INDEX, FOREIGN_KEY, OWNER, GRANT_RELATIONSHIP, GRANT_ATTRIBUTE")
 		os.Exit(1)
 	}
 
@@ -105,6 +110,7 @@ func main() {
 		compareColumns(conn1, conn2)
 		compareIndexes(conn1, conn2) // includes PK and Unique constraints
 		compareViews(conn1, conn2)
+		compareMatViews(conn1, conn2)
 		compareForeignKeys(conn1, conn2)
 		compareFunctions(conn1, conn2)
 		compareTriggers(conn1, conn2)
@@ -127,6 +133,8 @@ func main() {
 		compareIndexes(conn1, conn2)
 	} else if schemaType == "VIEW" {
 		compareViews(conn1, conn2)
+	} else if schemaType == "MATVIEW" {
+		compareMatViews(conn1, conn2)
 	} else if schemaType == "FOREIGN_KEY" {
 		compareForeignKeys(conn1, conn2)
 	} else if schemaType == "FUNCTION" {
@@ -205,8 +213,7 @@ Options:
   -S, --schema1 : first schema.  default is all schemas
   -s, --schema2 : second schema. default is all schemas
 
-<schemaTpe> can be: SCHEMA ROLE, SEQUENCE, TABLE, VIEW, COLUMN, TABLE_COLUMN, INDEX, FOREIGN_KEY, OWNER, GRANT_RELATIONSHIP, GRANT_ATTRIBUTE
-`)
+<schemaTpe> can be: ALL, SCHEMA, ROLE, SEQUENCE, TABLE, TABLE_COLUMN, VIEW, MATVIEW, COLUMN, INDEX, FOREIGN_KEY, OWNER, GRANT_RELATIONSHIP, GRANT_ATTRIBUTE, TRIGGER, FUNCTION`)
 
 	os.Exit(2)
 }

@@ -108,8 +108,6 @@ func (c *FunctionSchema) Compare(obj interface{}) int {
 
 // Add returns SQL to create the function
 func (c FunctionSchema) Add() {
-	fmt.Println("-- Add")
-
 	// If we are comparing two different schemas against each other, we need to do some
 	// modification of the first function definition so we create it in the right schema
 	functionDef := c.get("definition")
@@ -128,7 +126,6 @@ func (c FunctionSchema) Add() {
 
 // Drop returns SQL to drop the function
 func (c FunctionSchema) Drop() {
-	fmt.Println("-- Drop")
 	fmt.Println("-- Note that CASCADE in the statement below will also drop any triggers depending on this function.")
 	fmt.Println("-- Also, if there are two functions with this name, you will want to add arguments to identify the correct one to drop.")
 	fmt.Println("-- (See http://www.postgresql.org/docs/9.4/interactive/sql-dropfunction.html) ")
@@ -137,7 +134,6 @@ func (c FunctionSchema) Drop() {
 
 // Change handles the case where the function names match, but the definition does not
 func (c FunctionSchema) Change(obj interface{}) {
-	fmt.Println("-- Change")
 	c2, ok := obj.(*FunctionSchema)
 	if !ok {
 		fmt.Println("Error!!!, Change needs a FunctionSchema instance", c2)
