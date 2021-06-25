@@ -152,7 +152,7 @@ func (c *IndexSchema) Add() {
 			-1)
 	}
 
-	fmt.Println(indexDef)
+	fmt.Printf("%v;\n", indexDef)
 
 	if c.get("constraint_def") != "null" {
 		// Create the constraint using the index we just created
