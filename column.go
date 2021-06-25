@@ -35,7 +35,8 @@ SELECT table_schema
     , character_maximum_length
     , is_identity
     , identity_generation
-FROM information_schema.columns 
+    , substring(udt_name from 2) AS array_type
+FROM information_schema.columns
 WHERE is_updatable = 'YES'
 {{if eq $.DbSchema "*" }}
 AND table_schema NOT LIKE 'pg_%' 
@@ -169,10 +170,15 @@ func (c *ColumnSchema) Add() {
 			fmt.Printf("ALTER TABLE %s.%s ADD COLUMN %s character varying(%s)", schema, c.get("table_name"), c.get("column_name"), maxLength)
 		}
 	} else {
-		if c.get("data_type") == "ARRAY" {
-			fmt.Println("-- Note that adding of array data types are not yet generated properly.")
+		dataType := c.get("data_type")
+		//if c.get("data_type") == "ARRAY" {
+			//fmt.Println("-- Note that adding of array data types are not yet generated properly.")
+		//}
+		if dataType == "ARRAY" {
+			dataType = c.get("array_type")+"[]"
 		}
-		fmt.Printf("ALTER TABLE %s.%s ADD COLUMN %s %s", schema, c.get("table_name"), c.get("column_name"), c.get("data_type"))
+		//fmt.Printf("ALTER TABLE %s.%s ADD COLUMN %s %s", schema, c.get("table_name"), c.get("column_name"), c.get("data_type"))
+		fmt.Printf("ALTER TABLE %s.%s ADD COLUMN %s %s", schema, c.get("table_name"), c.get("column_name"), dataType)
 	}
 
 	if c.get("is_nullable") == "NO" {
@@ -202,10 +208,20 @@ func (c *ColumnSchema) Change(obj interface{}) {
 		fmt.Println("Error!!!, ColumnSchema.Change(obj) needs a ColumnSchema instance", c2)
 	}
 
+	// Adjust data type for array columns
+	dataType1 := c.get("data_type")
+	if dataType1 == "ARRAY" {
+		dataType1 = c.get("array_type")+"[]"
+	}
+	dataType2 := c2.get("data_type")
+	if dataType2 == "ARRAY" {
+		dataType2 = c2.get("array_type")+"[]"
+	}
+
 	// Detect column type change (mostly varchar length, or number size increase)
 	// (integer to/from bigint is OK)
-	if c.get("data_type") == c2.get("data_type") {
-		if c.get("data_type") == "character varying" {
+	if dataType1 == dataType2 {
+		if dataType1 == "character varying" {
 			max1, max1Valid := getMaxLength(c.get("character_maximum_length"))
 			max2, max2Valid := getMaxLength(c2.get("character_maximum_length"))
 			if !max1Valid && !max2Valid {
@@ -228,16 +244,16 @@ func (c *ColumnSchema) Change(obj interface{}) {
 	}
 
 	// Code and test a column change from integer to bigint
-	if c.get("data_type") != c2.get("data_type") {
-		fmt.Printf("-- WARNING: This type change may not work well: (%s to %s).\n", c2.get("data_type"), c.get("data_type"))
-		if strings.HasPrefix(c.get("data_type"), "character") {
+	if dataType1 != dataType2 {
+		fmt.Printf("-- WARNING: This type change may not work well: (%s to %s).\n", dataType2, dataType1)
+		if strings.HasPrefix(dataType1, "character") {
 			max1, max1Valid := getMaxLength(c.get("character_maximum_length"))
 			if !max1Valid {
 				fmt.Println("-- WARNING: varchar column has no maximum length.  Setting to 1024")
 			}
-			fmt.Printf("ALTER TABLE %s.%s ALTER COLUMN %s TYPE %s(%s);\n", c2.get("table_schema"), c.get("table_name"), c.get("column_name"), c.get("data_type"), max1)
+			fmt.Printf("ALTER TABLE %s.%s ALTER COLUMN %s TYPE %s(%s);\n", c2.get("table_schema"), c.get("table_name"), c.get("column_name"), dataType1, max1)
 		} else {
-			fmt.Printf("ALTER TABLE %s.%s ALTER COLUMN %s TYPE %s;\n", c2.get("table_schema"), c.get("table_name"), c.get("column_name"), c.get("data_type"))
+			fmt.Printf("ALTER TABLE %s.%s ALTER COLUMN %s TYPE %s;\n", c2.get("table_schema"), c.get("table_name"), c.get("column_name"), dataType1)
 		}
 	}
 
@@ -346,3 +362,4 @@ func getMaxLength(maxLength string) (string, bool) {
 	}
 	return maxLength, true
 }
+

@@ -74,3 +74,30 @@ echo
           -u "u1" -w "asdf" -h "localhost" -d "db2" -s "*" -o "sslmode=disable" \
           COLUMN | grep -v '^-- '
 echo
+echo ==============================================================
+
+./populate-db.sh db1 "
+    CREATE SCHEMA s3;
+    CREATE TABLE s3.table12 (
+        ids integer[],
+        bigids bigint[],
+        something text[][] -- dimensions don't seem to matter, so ignore them
+    );
+    CREATE SCHEMA s4;
+    CREATE TABLE s4.table12 ( -- add ids column
+        bigids integer[], -- change bigids to int8[]
+        something text[] -- no change
+    );
+"
+
+echo
+echo "# Compare array columns between two tables"
+echo "# Expect:"
+echo "#   Add s4.table12.ids int4[]"
+echo "#   Change s4.table12.bigids from to int8[]"
+echo
+
+../pgdiff -U "u1" -W "asdf" -H "localhost" -D "db1" -S "s3" -O "sslmode=disable" \
+          -u "u1" -w "asdf" -h "localhost" -d "db1" -s "s4" -o "sslmode=disable" \
+          COLUMN | grep -v '^-- '
+echo
