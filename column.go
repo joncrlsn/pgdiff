@@ -259,7 +259,7 @@ func (c *ColumnSchema) Change(obj interface{}) {
 
 	// Detect column default change (or added, dropped)
 	if c.get("column_default") == "null" {
-		if c.get("column_default") != "null" {
+		if c2.get("column_default") != "null" {
 			fmt.Printf("ALTER TABLE %s.%s ALTER COLUMN %s DROP DEFAULT;\n", c2.get("table_schema"), c.get("table_name"), c.get("column_name"))
 		}
 	} else if c.get("column_default") != c2.get("column_default") {
