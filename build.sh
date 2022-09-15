@@ -59,7 +59,7 @@ if [[ -f $OSX_README ]]; then
     echo $workdir
     mkdir -p $workdir
     # Build the executable
-    GOOS=darwin GOARCH=386 go build -o "$workdir/$APPNAME"
+    GOOS=darwin GOARCH=arm64 go build -o "$workdir/$APPNAME"
     # Download pgrun to the work directory 
     wget -O "$workdir/pgrun" "https://github.com/joncrlsn/pgrun/raw/master/bin-osx/pgrun"
     # Copy the bash runtime script to the temp directory
