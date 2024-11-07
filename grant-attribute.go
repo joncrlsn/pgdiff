@@ -27,7 +27,7 @@ func initGrantAttributeSqlTemplate() *template.Template {
 -- Attribute/Column ACL only
 SELECT
   n.nspname AS schema_name
-  , {{ if eq $.DbSchema "*" }}n.nspname || '.' || {{ end }}c.relkind || '.' || c.relname || '.' || a.attname AS compare_name
+  , {{ if eq $.DbSchema "*" }}n.nspname::text || '.' || {{ end }}c.relkind::text  || '.' || c.relname::text || '.' || a.attname AS compare_name
   , CASE c.relkind
     WHEN 'r' THEN 'TABLE'
     WHEN 'v' THEN 'VIEW'

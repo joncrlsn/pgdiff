@@ -25,7 +25,7 @@ var (
 func initGrantRelationshipSqlTemplate() *template.Template {
 	sql := `
 SELECT n.nspname AS schema_name
-  , {{ if eq $.DbSchema "*" }}n.nspname || '.' || {{ end }}c.relkind || '.' || c.relname AS compare_name
+  , {{ if eq $.DbSchema "*" }}n.nspname::text  || '.' || {{ end }}c.relkind::text  || '.' || c.relname::text  AS compare_name
   , CASE c.relkind
     WHEN 'r' THEN 'TABLE'
     WHEN 'v' THEN 'VIEW'

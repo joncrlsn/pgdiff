@@ -8,12 +8,14 @@
 
 package main
 
-import "sort"
-import "fmt"
-import "strings"
-import "regexp"
+import (
+		"sort"
+ 		"fmt"
+ 		"strings"
+ 		"regexp"
+)
 
-var aclRegex = regexp.MustCompile(`([a-zA-Z0-9]+)*=([rwadDxtXUCcT]+)/([a-zA-Z0-9]+)$`)
+var aclRegex = regexp.MustCompile(`([a-zA-Z0-9_]+)*=([rwadDxtXUCcT]+)/([a-zA-Z0-9_]+)$`)
 
 var permMap = map[string]string{
 	"a": "INSERT",

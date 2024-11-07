@@ -6,11 +6,13 @@
 
 package main
 
-import "fmt"
-import "sort"
-import "database/sql"
-import "github.com/joncrlsn/pgutil"
-import "github.com/joncrlsn/misc"
+import (
+		"fmt"
+		"sort"
+		"database/sql"
+		"github.com/joncrlsn/pgutil"
+		"github.com/joncrlsn/misc"
+)
 
 // ==================================
 // ViewRows definition
@@ -99,7 +101,7 @@ func compareViews(conn1 *sql.DB, conn2 *sql.DB) {
 	SELECT schemaname || '.' || viewname AS viewname
 		, definition 
 	FROM pg_views 
-	WHERE schemaname NOT LIKE 'pg_%' 
+	WHERE schemaname NOT LIKE 'pg_%' AND schemaname!='infromation_schema'
 	ORDER BY viewname;
 	`
 
