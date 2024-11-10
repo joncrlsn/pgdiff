@@ -252,13 +252,13 @@ func (c RoleSchema) Change(obj interface{}) {
 		// TODO: Define INHERIT or not
 		for _, mo1 := range membersof1 {
 			if !misc.ContainsString(membersof2, mo1) {
-				fmt.Printf("GRANT %s TO %s;\n", mo1, c.get("rolename"))
+				fmt.Printf("GRANT %s TO %s;\n", mo1, c.get("rolname"))
 			}
 		}
 
 		for _, mo2 := range membersof2 {
 			if !misc.ContainsString(membersof1, mo2) {
-				fmt.Printf("REVOKE %s FROM %s;\n", mo2, c.get("rolename"))
+				fmt.Printf("REVOKE %s FROM %s;\n", mo2, c.get("rolname"))
 			}
 		}
 
