@@ -24,6 +24,9 @@ LINUX_FILE="${APPNAME}-linux-${VERSION}.tar.gz"
 OSX_README=README-osx.md
 OSX_FILE="${APPNAME}-osx-${VERSION}.tar.gz"
 
+ARM64_README=README-macos-arm64.md
+ARM64_FILE="${APPNAME}-macos-arm64-${VERSION}.tar.gz"
+
 WIN_README=README-win.md
 WIN_FILE="${APPNAME}-win-${VERSION}.zip"
 
@@ -75,6 +78,31 @@ if [[ -f $OSX_README ]]; then
     echo "Built osx."
 else
     echo "Skipping osx.  No $OSX_README file."
+fi
+
+if [[ -f $ARM64_README ]]; then
+    echo "  ==== Building macOS-arm64 ===="
+    tempdir="$(mktemp -d)"
+    workdir="$tempdir/$APPNAME"
+    echo $workdir
+    mkdir -p $workdir
+    # Build the executable
+    GOOS=darwin GOARCH=arm64 go build -o "$workdir/$APPNAME"
+    # Download pgrun to the work directory 
+    wget -O "$workdir/pgrun" "https://github.com/feverxai/pgrun/raw/master/bin-arm64/pgrun" # once PR is accepted change to "https://github.com/joncrlsn/pgrun/raw/master/bin-arm64/pgrun"
+    # Copy the bash runtime script to the temp directory
+    cp pgdiff.sh "$workdir/"
+    cp "${SCRIPT_DIR}/${ARM64_README}" "$workdir/README.md"
+    cd "$tempdir"
+    # Make everything executable
+    chmod -v ugo+x $APPNAME/*
+    tarName="${tempdir}/${ARM64_FILE}"
+    COPYFILE_DISABLE=true tar -cvzf "$tarName" $APPNAME
+    cd -
+    mv "$tarName" "${SCRIPT_DIR}/"
+    echo "Built macOS-arm64."
+else
+    echo "Skipping macOS-arm64.  No $ARM64_README file."
 fi
 
 if [[ -f $WIN_README ]]; then
