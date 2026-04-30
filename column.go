@@ -22,27 +22,35 @@ var (
 	columnSqlTemplate = initColumnSqlTemplate()
 )
 
-// Initializes the Sql template
+// initColumnSqlTemplate builds the COLUMN diff query.
+//
+// Restricted to BASE TABLE columns. Views (incl. simple updatable ones) and
+// matviews are excluded — emitting ALTER TABLE against a view is invalid; view
+// schema drift surfaces through the VIEW/MATVIEW comparators which DROP+CREATE.
 func initColumnSqlTemplate() *template.Template {
 	sql := `
-SELECT table_schema
-    ,  {{if eq $.DbSchema "*" }}table_schema || '.' || {{end}}table_name || '.' ||lpad(cast (ordinal_position as varchar), 5, '0')|| column_name AS compare_name
-	, table_name
-    , column_name
-    , data_type
-    , is_nullable
-    , column_default
-    , character_maximum_length
-    , is_identity
-    , identity_generation
-    , substring(udt_name from 2) AS array_type
-FROM information_schema.columns
-WHERE is_updatable = 'YES'
+SELECT a.table_schema
+    , {{if eq $.DbSchema "*" }}a.table_schema || '.' || {{end}}a.table_name || '.' || a.column_name AS compare_name
+	, a.table_name
+    , a.column_name
+    , a.data_type
+    , a.is_nullable
+    , a.column_default
+    , a.character_maximum_length
+    , a.is_identity
+    , a.identity_generation
+    , substring(a.udt_name from 2) AS array_type
+FROM information_schema.columns a
+INNER JOIN information_schema.tables b
+    ON a.table_schema = b.table_schema
+   AND a.table_name = b.table_name
+   AND b.table_type = 'BASE TABLE'
+WHERE 1=1
 {{if eq $.DbSchema "*" }}
-AND table_schema NOT LIKE 'pg_%' 
-AND table_schema <> 'information_schema' 
+AND a.table_schema NOT LIKE 'pg_%'
+AND a.table_schema <> 'information_schema'
 {{else}}
-AND table_schema = '{{$.DbSchema}}'
+AND a.table_schema = '{{$.DbSchema}}'
 {{end}}
 ORDER BY compare_name ASC;
 `
@@ -162,23 +170,22 @@ func (c *ColumnSchema) Add() {
 		fmt.Println("-- Attempting to create identity columns in earlier versions will probably result in errors.")
 	}
 
+	tableRef := quoteQualified(schema, c.get("table_name"))
+	colRef := quoteIdent(c.get("column_name"))
+
 	if c.get("data_type") == "character varying" {
 		maxLength, valid := getMaxLength(c.get("character_maximum_length"))
 		if !valid {
-			fmt.Printf("ALTER TABLE %s.%s ADD COLUMN %s character varying", schema, c.get("table_name"), c.get("column_name"))
+			fmt.Printf("ALTER TABLE %s ADD COLUMN %s character varying", tableRef, colRef)
 		} else {
-			fmt.Printf("ALTER TABLE %s.%s ADD COLUMN %s character varying(%s)", schema, c.get("table_name"), c.get("column_name"), maxLength)
+			fmt.Printf("ALTER TABLE %s ADD COLUMN %s character varying(%s)", tableRef, colRef, maxLength)
 		}
 	} else {
 		dataType := c.get("data_type")
-		//if c.get("data_type") == "ARRAY" {
-			//fmt.Println("-- Note that adding of array data types are not yet generated properly.")
-		//}
 		if dataType == "ARRAY" {
-			dataType = c.get("array_type")+"[]"
+			dataType = c.get("array_type") + "[]"
 		}
-		//fmt.Printf("ALTER TABLE %s.%s ADD COLUMN %s %s", schema, c.get("table_name"), c.get("column_name"), c.get("data_type"))
-		fmt.Printf("ALTER TABLE %s.%s ADD COLUMN %s %s", schema, c.get("table_name"), c.get("column_name"), dataType)
+		fmt.Printf("ALTER TABLE %s ADD COLUMN %s %s", tableRef, colRef, dataType)
 	}
 
 	if c.get("is_nullable") == "NO" {
@@ -197,8 +204,9 @@ func (c *ColumnSchema) Add() {
 
 // Drop prints SQL to drop the column
 func (c *ColumnSchema) Drop() {
-	// if dropping column
-	fmt.Printf("ALTER TABLE %s.%s DROP COLUMN IF EXISTS %s;\n", c.get("table_schema"), c.get("table_name"), c.get("column_name"))
+	fmt.Printf("ALTER TABLE %s DROP COLUMN IF EXISTS %s;\n",
+		quoteQualified(c.get("table_schema"), c.get("table_name")),
+		quoteIdent(c.get("column_name")))
 }
 
 // Change handles the case where the table and column match, but the details do not
@@ -207,6 +215,9 @@ func (c *ColumnSchema) Change(obj interface{}) {
 	if !ok {
 		fmt.Println("Error!!!, ColumnSchema.Change(obj) needs a ColumnSchema instance", c2)
 	}
+
+	tableRef := quoteQualified(c2.get("table_schema"), c.get("table_name"))
+	colRef := quoteIdent(c.get("column_name"))
 
 	// Adjust data type for array columns
 	dataType1 := c.get("data_type")
@@ -238,7 +249,7 @@ func (c *ColumnSchema) Change(obj interface{}) {
 					fmt.Println("-- WARNING: The next statement will shorten a character varying column, which may result in data loss.")
 				}
 				fmt.Printf("-- max1Valid: %v  max2Valid: %v \n", max1Valid, max2Valid)
-				fmt.Printf("ALTER TABLE %s.%s ALTER COLUMN %s TYPE character varying(%s);\n", c2.get("table_schema"), c.get("table_name"), c.get("column_name"), max1)
+				fmt.Printf("ALTER TABLE %s ALTER COLUMN %s TYPE character varying(%s);\n", tableRef, colRef, max1)
 			}
 		}
 	}
@@ -251,19 +262,34 @@ func (c *ColumnSchema) Change(obj interface{}) {
 			if !max1Valid {
 				fmt.Println("-- WARNING: varchar column has no maximum length.  Setting to 1024")
 			}
-			fmt.Printf("ALTER TABLE %s.%s ALTER COLUMN %s TYPE %s(%s);\n", c2.get("table_schema"), c.get("table_name"), c.get("column_name"), dataType1, max1)
+			fmt.Printf("ALTER TABLE %s ALTER COLUMN %s TYPE %s(%s);\n", tableRef, colRef, dataType1, max1)
 		} else {
-			fmt.Printf("ALTER TABLE %s.%s ALTER COLUMN %s TYPE %s;\n", c2.get("table_schema"), c.get("table_name"), c.get("column_name"), dataType1)
+			fmt.Printf("ALTER TABLE %s ALTER COLUMN %s TYPE %s;\n", tableRef, colRef, dataType1)
 		}
 	}
 
 	// Detect column default change (or added, dropped)
 	if c.get("column_default") == "null" {
 		if c2.get("column_default") != "null" {
-			fmt.Printf("ALTER TABLE %s.%s ALTER COLUMN %s DROP DEFAULT;\n", c2.get("table_schema"), c.get("table_name"), c.get("column_name"))
+			fmt.Printf("ALTER TABLE %s ALTER COLUMN %s DROP DEFAULT;\n", tableRef, colRef)
 		}
 	} else if c.get("column_default") != c2.get("column_default") {
-		fmt.Printf("ALTER TABLE %s.%s ALTER COLUMN %s SET DEFAULT %s;\n", c2.get("table_schema"), c.get("table_name"), c.get("column_name"), c.get("column_default"))
+		// Both sides referencing nextval() with different sequence names is almost always
+		// sequence-name drift (e.g. foo_id_seq vs foo_id_seq1), not an intentional swap to a
+		// different sequence. Pointing the column at the src-named sequence on dst is risky:
+		// the target sequence may not exist there, or its last_value may collide with existing
+		// PKs. The SEQUENCE diff handles this case via ALTER SEQUENCE ... RENAME, which
+		// transparently updates the column's regclass-stored default.
+		if isNextvalDefault(c.get("column_default")) && isNextvalDefault(c2.get("column_default")) {
+			fmt.Printf("-- WARNING: nextval() default drift on %s.%s.%s\n", c2.get("table_schema"), c.get("table_name"), c.get("column_name"))
+			fmt.Printf("--          src=%s\n", c.get("column_default"))
+			fmt.Printf("--          dst=%s\n", c2.get("column_default"))
+			fmt.Println("--          Suppressing SET DEFAULT — the SEQUENCE diff will RENAME the dst sequence")
+			fmt.Println("--          if both sides share an owning column. If they don't, review manually.")
+			fmt.Printf("-- ALTER TABLE %s ALTER COLUMN %s SET DEFAULT %s;\n", tableRef, colRef, c.get("column_default"))
+		} else {
+			fmt.Printf("ALTER TABLE %s ALTER COLUMN %s SET DEFAULT %s;\n", tableRef, colRef, c.get("column_default"))
+		}
 	}
 
 	// Detect identity column change
@@ -275,9 +301,9 @@ func (c *ColumnSchema) Change(obj interface{}) {
 		fmt.Println("-- WARNING: identity columns are not supported in PostgreSQL versions < 10.")
 		fmt.Println("-- Attempting to create identity columns in earlier versions will probably result in errors.")
 		if c.get("is_identity") == "YES" {
-			identitySql = fmt.Sprintf("ALTER TABLE \"%s\".\"%s\" ALTER COLUMN \"%s\" ADD GENERATED %s AS IDENTITY;\n", c2.get("table_schema"), c.get("table_name"), c.get("column_name"), c.get("identity_generation"))
+			identitySql = fmt.Sprintf("ALTER TABLE %s ALTER COLUMN %s ADD GENERATED %s AS IDENTITY;\n", tableRef, colRef, c.get("identity_generation"))
 		} else {
-			identitySql = fmt.Sprintf("ALTER TABLE \"%s\".\"%s\" ALTER COLUMN \"%s\" DROP IDENTITY;\n", c2.get("table_schema"), c.get("table_name"), c.get("column_name"))
+			identitySql = fmt.Sprintf("ALTER TABLE %s ALTER COLUMN %s DROP IDENTITY;\n", tableRef, colRef)
 		}
 	}
 
@@ -287,9 +313,9 @@ func (c *ColumnSchema) Change(obj interface{}) {
 			if identitySql != "" {
 				fmt.Printf(identitySql)
 			}
-			fmt.Printf("ALTER TABLE %s.%s ALTER COLUMN %s DROP NOT NULL;\n", c2.get("table_schema"), c.get("table_name"), c.get("column_name"))
+			fmt.Printf("ALTER TABLE %s ALTER COLUMN %s DROP NOT NULL;\n", tableRef, colRef)
 		} else {
-			fmt.Printf("ALTER TABLE %s.%s ALTER COLUMN %s SET NOT NULL;\n", c2.get("table_schema"), c.get("table_name"), c.get("column_name"))
+			fmt.Printf("ALTER TABLE %s ALTER COLUMN %s SET NOT NULL;\n", tableRef, colRef)
 			if identitySql != "" {
 				fmt.Printf(identitySql)
 			}
@@ -361,5 +387,12 @@ func getMaxLength(maxLength string) (string, bool) {
 		return "1024", false
 	}
 	return maxLength, true
+}
+
+// isNextvalDefault reports whether a column_default value is a nextval() call.
+// Postgres formats these as `nextval('seqname'::regclass)`, sometimes with
+// a schema-qualified or quoted identifier — prefix-matching after trimming is enough.
+func isNextvalDefault(s string) bool {
+	return strings.HasPrefix(strings.TrimSpace(strings.ToLower(s)), "nextval(")
 }
 

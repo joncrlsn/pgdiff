@@ -106,16 +106,16 @@ func (c *TriggerSchema) Compare(obj interface{}) int {
 
 // Add returns SQL to create the trigger
 func (c TriggerSchema) Add() {
-	// If we are comparing two different schemas against each other, we need to do some
-	// modification of the first trigger definition so we create it in the right schema
+	// pg_get_triggerdef emits identifiers already quoted; when comparing across schemas,
+	// rewrite the quoted-qualified table reference so the trigger lands in the right schema.
 	triggerDef := c.get("trigger_def")
 	schemaName := c.get("schema_name")
 	if dbInfo1.DbSchema != dbInfo2.DbSchema {
 		schemaName = dbInfo2.DbSchema
 		triggerDef = strings.Replace(
 			triggerDef,
-			fmt.Sprintf(" %s.%s ", c.get("schema_name"), c.get("table_name")),
-			fmt.Sprintf(" %s.%s ", schemaName, c.get("table_name")),
+			fmt.Sprintf(" %s ", quoteQualified(c.get("schema_name"), c.get("table_name"))),
+			fmt.Sprintf(" %s ", quoteQualified(schemaName, c.get("table_name"))),
 			-1)
 	}
 
@@ -124,7 +124,9 @@ func (c TriggerSchema) Add() {
 
 // Drop returns SQL to drop the trigger
 func (c TriggerSchema) Drop() {
-	fmt.Printf("DROP TRIGGER %s ON %s.%s;\n", c.get("trigger_name"), c.get("schema_name"), c.get("table_name"))
+	fmt.Printf("DROP TRIGGER %s ON %s;\n",
+		quoteIdent(c.get("trigger_name")),
+		quoteQualified(c.get("schema_name"), c.get("table_name")))
 }
 
 // Change handles the case where the trigger names match, but the definition does not
@@ -136,21 +138,20 @@ func (c TriggerSchema) Change(obj interface{}) {
 	if c.get("trigger_def") != c2.get("trigger_def") {
 		fmt.Println("-- This function looks different so we'll drop and recreate it:")
 
-		// If we are comparing two different schemas against each other, we need to do some
-		// modification of the first trigger definition so we create it in the right schema
 		triggerDef := c.get("trigger_def")
 		schemaName := c.get("schema_name")
 		if dbInfo1.DbSchema != dbInfo2.DbSchema {
 			schemaName = dbInfo2.DbSchema
 			triggerDef = strings.Replace(
 				triggerDef,
-				fmt.Sprintf(" %s.%s ", c.get("schema_name"), c.get("table_name")),
-				fmt.Sprintf(" %s.%s ", schemaName, c.get("table_name")),
+				fmt.Sprintf(" %s ", quoteQualified(c.get("schema_name"), c.get("table_name"))),
+				fmt.Sprintf(" %s ", quoteQualified(schemaName, c.get("table_name"))),
 				-1)
 		}
 
-		// The trigger_def column has everything needed to rebuild the function
-		fmt.Printf("DROP TRIGGER %s ON %s.%s;\n", c.get("trigger_name"), schemaName, c.get("table_name"))
+		fmt.Printf("DROP TRIGGER %s ON %s;\n",
+			quoteIdent(c.get("trigger_name")),
+			quoteQualified(schemaName, c.get("table_name")))
 		fmt.Println("-- STATEMENT-BEGIN")
 		fmt.Printf("%s;\n", triggerDef)
 		fmt.Println("-- STATEMENT-END")

@@ -1,0 +1,62 @@
+name: Release Build
+
+on:
+  release:
+    types: [created]
+
+permissions:
+  contents: write
+
+jobs:
+  build-and-upload:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout source at release tag
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.release.tag_name }}
+
+      - name: Derive version (strip leading v)
+        id: version
+        run: |
+          tag="${{ github.event.release.tag_name }}"
+          version="${tag#v}"
+          echo "version=${version}" >> "$GITHUB_OUTPUT"
+
+      - name: Build builder image
+        run: docker build -f Dockerfile.build -t pgdiff-builder .
+
+      - name: Run build.sh inside docker
+        env:
+          VERSION: ${{ steps.version.outputs.version }}
+        run: |
+          # run as the runner user so artifacts land owned by the host user;
+          # HOME=/tmp gives go module cache a writable location.
+          docker run --rm \
+            -u "$(id -u):$(id -g)" \
+            -v "$PWD":/src \
+            -w /src \
+            -e VERSION="${VERSION}" \
+            -e HOME=/tmp \
+            pgdiff-builder \
+            bash build.sh
+
+      - name: List built artifacts
+        run: ls -lh pgdiff-*-${{ steps.version.outputs.version }}.* || true
+
+      - name: Upload archives to GitHub release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAG: ${{ github.event.release.tag_name }}
+          VERSION: ${{ steps.version.outputs.version }}
+        run: |
+          shopt -s nullglob
+          assets=( pgdiff-linux-${VERSION}.tar.gz \
+                   pgdiff-linux-arm64-${VERSION}.tar.gz \
+                   pgdiff-macos-arm64-${VERSION}.tar.gz \
+                   pgdiff-win-${VERSION}.zip )
+          if [ ${#assets[@]} -eq 0 ]; then
+            echo "No artifacts found for version ${VERSION}" >&2
+            exit 1
+          fi
+          gh release upload "${TAG}" "${assets[@]}" --clobber

@@ -1,2 +1,5 @@
 pgdiff
 vendor/*
+.env
+pgdiff-*.tar.gz
+pgdiff-*.zip

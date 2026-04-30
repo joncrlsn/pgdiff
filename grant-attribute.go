@@ -155,13 +155,21 @@ func (c *GrantAttributeSchema) Add() {
 	}
 
 	role, grants := parseGrants(c.get("attribute_acl"))
-	fmt.Printf("GRANT %s (%s) ON %s.%s TO %s; -- Add\n", strings.Join(grants, ", "), c.get("attribute_name"), schema, c.get("relationship_name"), role)
+	fmt.Printf("GRANT %s (%s) ON %s TO %s; -- Add\n",
+		strings.Join(grants, ", "),
+		quoteIdent(c.get("attribute_name")),
+		quoteQualified(schema, c.get("relationship_name")),
+		quoteIdent(role))
 }
 
 // Drop prints SQL to drop the grant
 func (c *GrantAttributeSchema) Drop() {
 	role, grants := parseGrants(c.get("attribute_acl"))
-	fmt.Printf("REVOKE %s (%s) ON %s.%s FROM %s; -- Drop\n", strings.Join(grants, ", "), c.get("attribute_name"), c.get("schema_name"), c.get("relationship_name"), role)
+	fmt.Printf("REVOKE %s (%s) ON %s FROM %s; -- Drop\n",
+		strings.Join(grants, ", "),
+		quoteIdent(c.get("attribute_name")),
+		quoteQualified(c.get("schema_name"), c.get("relationship_name")),
+		quoteIdent(role))
 }
 
 // Change handles the case where the relationship and column match, but the grant does not
@@ -183,8 +191,11 @@ func (c *GrantAttributeSchema) Change(obj interface{}) {
 		}
 	}
 	if len(grantList) > 0 {
-		fmt.Printf("GRANT %s (%s) ON %s.%s TO %s; -- Change\n", strings.Join(grantList, ", "),
-			c.get("attribute_name"), c2.get("schema_name"), c.get("relationship_name"), role)
+		fmt.Printf("GRANT %s (%s) ON %s TO %s; -- Change\n",
+			strings.Join(grantList, ", "),
+			quoteIdent(c.get("attribute_name")),
+			quoteQualified(c2.get("schema_name"), c.get("relationship_name")),
+			quoteIdent(role))
 	}
 
 	// Find grants in the second db that are not in the first
@@ -196,7 +207,11 @@ func (c *GrantAttributeSchema) Change(obj interface{}) {
 		}
 	}
 	if len(revokeList) > 0 {
-		fmt.Printf("REVOKE %s (%s) ON %s.%s FROM %s; -- Change\n", strings.Join(revokeList, ", "), c.get("attribute_name"), c2.get("schema_name"), c.get("relationship_name"), role)
+		fmt.Printf("REVOKE %s (%s) ON %s FROM %s; -- Change\n",
+			strings.Join(revokeList, ", "),
+			quoteIdent(c.get("attribute_name")),
+			quoteQualified(c2.get("schema_name"), c.get("relationship_name")),
+			quoteIdent(role))
 	}
 
 	//fmt.Printf("--1 rel:%s, relAcl:%s, col:%s, colAcl:%s\n", c.get("attribute_name"), c.get("attribute_acl"), c.get("attribute_name"), c.get("attribute_acl"))

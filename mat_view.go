@@ -7,13 +7,61 @@
 package main
 
 import (
+	"bytes"
 	"database/sql"
 	"fmt"
 	"sort"
+	"text/template"
 
 	"github.com/joncrlsn/misc"
 	"github.com/joncrlsn/pgutil"
 )
+
+var (
+	matViewSqlTemplate = initMatViewSqlTemplate()
+)
+
+// initMatViewSqlTemplate builds the query used to list matviews, optionally scoped to a single schema.
+func initMatViewSqlTemplate() *template.Template {
+	sql := `
+WITH matviews AS (
+	SELECT
+		schemaname,
+		matviewname,
+		schemaname || '.' || matviewname AS qualname,
+		definition
+	FROM pg_catalog.pg_matviews
+	WHERE 1=1
+	AND NOT EXISTS (
+		SELECT 1
+		FROM pg_class c
+		JOIN pg_namespace n ON n.oid = c.relnamespace
+		JOIN pg_depend d ON d.classid = 'pg_class'::regclass
+		                AND d.objid = c.oid
+		                AND d.deptype = 'e'
+		WHERE n.nspname = schemaname AND c.relname = matviewname
+	)
+	{{if eq $.DbSchema "*" }}
+	AND schemaname NOT LIKE 'pg_%'
+	{{else}}
+	AND schemaname = '{{$.DbSchema}}'
+	{{end}}
+)
+SELECT
+	mv.qualname AS matviewname,
+	mv.schemaname AS schema_name,
+	mv.matviewname AS mat_view_name,
+	mv.definition,
+	COALESCE(string_agg(i.indexdef, ';' || E'\n\n') || ';', '') AS indexdef
+FROM matviews mv
+LEFT JOIN pg_catalog.pg_indexes i ON mv.qualname = i.schemaname || '.' || i.tablename
+GROUP BY mv.qualname, mv.schemaname, mv.matviewname, mv.definition
+ORDER BY mv.qualname;
+`
+	t := template.New("MatViewSqlTmpl")
+	template.Must(t.Parse(sql))
+	return t
+}
 
 // ==================================
 // MatViewRows definition
@@ -74,14 +122,19 @@ func (c *MatViewSchema) Compare(obj interface{}) int {
 	return val
 }
 
+// matViewRef returns the quoted schema.matview identifier for the current row.
+func (c *MatViewSchema) matViewRef() string {
+	return quoteQualified(c.get("schema_name"), c.get("mat_view_name"))
+}
+
 // Add returns SQL to create the matview
 func (c MatViewSchema) Add() {
-	fmt.Printf("CREATE MATERIALIZED VIEW %s AS %s \n\n%s \n\n", c.get("matviewname"), c.get("definition"), c.get("indexdef"))
+	fmt.Printf("CREATE MATERIALIZED VIEW %s AS %s \n\n%s \n\n", c.matViewRef(), c.get("definition"), c.get("indexdef"))
 }
 
 // Drop returns SQL to drop the matview
 func (c MatViewSchema) Drop() {
-	fmt.Printf("DROP MATERIALIZED VIEW %s;\n\n", c.get("matviewname"))
+	fmt.Printf("DROP MATERIALIZED VIEW %s;\n\n", c.matViewRef())
 }
 
 // Change handles the case where the names match, but the definition does not
@@ -90,33 +143,22 @@ func (c MatViewSchema) Change(obj interface{}) {
 	if !ok {
 		fmt.Println("Error!!!, Change needs a MatViewSchema instance", c2)
 	}
-	if c.get("definition") != c2.get("definition") {
-		fmt.Printf("DROP MATERIALIZED VIEW %s;\n\n", c.get("matviewname"))
-		fmt.Printf("CREATE MATERIALIZED VIEW %s AS %s \n\n%s \n\n", c.get("matviewname"), c.get("definition"), c.get("indexdef"))
+	if !defsEqual(c.get("definition"), c2.get("definition")) {
+		fmt.Printf("DROP MATERIALIZED VIEW %s;\n\n", c.matViewRef())
+		fmt.Printf("CREATE MATERIALIZED VIEW %s AS %s \n\n%s \n\n", c.matViewRef(), c.get("definition"), c.get("indexdef"))
 	}
 }
 
 // compareMatViews outputs SQL to make the matviews match between DBs
 func compareMatViews(conn1 *sql.DB, conn2 *sql.DB) {
-	sql := `
-	WITH matviews as ( SELECT schemaname || '.' || matviewname AS matviewname,
-	definition
-	FROM pg_catalog.pg_matviews 
-	WHERE schemaname NOT LIKE 'pg_%' 
-	)
-	SELECT
-	matviewname,
-	definition,
-	COALESCE(string_agg(indexdef, ';' || E'\n\n') || ';', '')  as indexdef
-	FROM matviews
-	LEFT JOIN  pg_catalog.pg_indexes on matviewname = schemaname || '.' || tablename
-	group by matviewname, definition
-	ORDER BY
-	matviewname;
-	`
+	buf1 := new(bytes.Buffer)
+	matViewSqlTemplate.Execute(buf1, dbInfo1)
 
-	rowChan1, _ := pgutil.QueryStrings(conn1, sql)
-	rowChan2, _ := pgutil.QueryStrings(conn2, sql)
+	buf2 := new(bytes.Buffer)
+	matViewSqlTemplate.Execute(buf2, dbInfo2)
+
+	rowChan1, _ := pgutil.QueryStrings(conn1, buf1.String())
+	rowChan2, _ := pgutil.QueryStrings(conn2, buf2.String())
 
 	rows1 := make(MatViewRows, 0)
 	for row := range rowChan1 {

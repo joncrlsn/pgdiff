@@ -7,12 +7,50 @@
 package main
 
 import (
-		"fmt"
-		"sort"
-		"database/sql"
-		"github.com/joncrlsn/pgutil"
-		"github.com/joncrlsn/misc"
+	"bytes"
+	"database/sql"
+	"fmt"
+	"sort"
+	"text/template"
+
+	"github.com/joncrlsn/misc"
+	"github.com/joncrlsn/pgutil"
 )
+
+var (
+	viewSqlTemplate = initViewSqlTemplate()
+)
+
+// initViewSqlTemplate builds the query used to list views, optionally scoped to a single schema.
+func initViewSqlTemplate() *template.Template {
+	sql := `
+SELECT schemaname || '.' || viewname AS viewname
+	, schemaname AS schema_name
+	, viewname   AS view_name
+	, definition
+FROM pg_views
+WHERE 1=1
+AND NOT EXISTS (
+    SELECT 1
+    FROM pg_class c
+    JOIN pg_namespace n ON n.oid = c.relnamespace
+    JOIN pg_depend d ON d.classid = 'pg_class'::regclass
+                    AND d.objid = c.oid
+                    AND d.deptype = 'e'
+    WHERE n.nspname = schemaname AND c.relname = viewname
+)
+{{if eq $.DbSchema "*" }}
+AND schemaname NOT LIKE 'pg_%'
+AND schemaname <> 'information_schema'
+{{else}}
+AND schemaname = '{{$.DbSchema}}'
+{{end}}
+ORDER BY viewname;
+`
+	t := template.New("ViewSqlTmpl")
+	template.Must(t.Parse(sql))
+	return t
+}
 
 // ==================================
 // ViewRows definition
@@ -73,14 +111,19 @@ func (c *ViewSchema) Compare(obj interface{}) int {
 	return val
 }
 
+// viewRef returns the quoted schema.view identifier for the current row.
+func (c *ViewSchema) viewRef() string {
+	return quoteQualified(c.get("schema_name"), c.get("view_name"))
+}
+
 // Add returns SQL to create the view
 func (c ViewSchema) Add() {
-	fmt.Printf("CREATE VIEW %s AS %s \n\n", c.get("viewname"), c.get("definition"))
+	fmt.Printf("CREATE VIEW %s AS %s \n\n", c.viewRef(), c.get("definition"))
 }
 
 // Drop returns SQL to drop the view
 func (c ViewSchema) Drop() {
-	fmt.Printf("DROP VIEW %s;\n\n", c.get("viewname"))
+	fmt.Printf("DROP VIEW %s;\n\n", c.viewRef())
 }
 
 // Change handles the case where the names match, but the definition does not
@@ -89,24 +132,22 @@ func (c ViewSchema) Change(obj interface{}) {
 	if !ok {
 		fmt.Println("Error!!!, Change needs a ViewSchema instance", c2)
 	}
-	if c.get("definition") != c2.get("definition") {
-		fmt.Printf("DROP VIEW %s;\n", c.get("viewname"))
-		fmt.Printf("CREATE VIEW %s AS %s \n\n", c.get("viewname"), c.get("definition"))
+	if !defsEqual(c.get("definition"), c2.get("definition")) {
+		fmt.Printf("DROP VIEW %s;\n", c.viewRef())
+		fmt.Printf("CREATE VIEW %s AS %s \n\n", c.viewRef(), c.get("definition"))
 	}
 }
 
 // compareViews outputs SQL to make the views match between DBs
 func compareViews(conn1 *sql.DB, conn2 *sql.DB) {
-	sql := `
-	SELECT schemaname || '.' || viewname AS viewname
-		, definition 
-	FROM pg_views 
-	WHERE schemaname NOT LIKE 'pg_%' AND schemaname!='infromation_schema'
-	ORDER BY viewname;
-	`
+	buf1 := new(bytes.Buffer)
+	viewSqlTemplate.Execute(buf1, dbInfo1)
 
-	rowChan1, _ := pgutil.QueryStrings(conn1, sql)
-	rowChan2, _ := pgutil.QueryStrings(conn2, sql)
+	buf2 := new(bytes.Buffer)
+	viewSqlTemplate.Execute(buf2, dbInfo2)
+
+	rowChan1, _ := pgutil.QueryStrings(conn1, buf1.String())
+	rowChan2, _ := pgutil.QueryStrings(conn2, buf2.String())
 
 	rows1 := make(ViewRows, 0)
 	for row := range rowChan1 {

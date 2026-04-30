@@ -35,9 +35,15 @@ func initFunctionSqlTemplate() *template.Template {
     JOIN pg_namespace n ON (n.oid = p.pronamespace)
     JOIN pg_language l ON (p.prolang = l.oid AND l.lanname IN ('c','plpgsql', 'sql'))
     WHERE true
+    AND NOT EXISTS (
+        SELECT 1 FROM pg_depend d
+        WHERE d.classid = 'pg_proc'::regclass
+          AND d.objid = p.oid
+          AND d.deptype = 'e'
+    )
 	{{if eq $.DbSchema "*" }}
-    AND n.nspname NOT LIKE 'pg_%' 
-    AND n.nspname <> 'information_schema' 
+    AND n.nspname NOT LIKE 'pg_%'
+    AND n.nspname <> 'information_schema'
     {{else}}
     AND n.nspname = '{{$.DbSchema}}'
     {{end}};
@@ -108,14 +114,14 @@ func (c *FunctionSchema) Compare(obj interface{}) int {
 
 // Add returns SQL to create the function
 func (c FunctionSchema) Add() {
-	// If we are comparing two different schemas against each other, we need to do some
-	// modification of the first function definition so we create it in the right schema
+	// pg_get_functiondef quotes identifiers; rewrite the quoted-qualified name when
+	// targeting a different schema on dst.
 	functionDef := c.get("definition")
 	if dbInfo1.DbSchema != dbInfo2.DbSchema {
 		functionDef = strings.Replace(
 			functionDef,
-			fmt.Sprintf("FUNCTION %s.%s(", c.get("schema_name"), c.get("function_name")),
-			fmt.Sprintf("FUNCTION %s.%s(", dbInfo2.DbSchema, c.get("function_name")),
+			fmt.Sprintf("FUNCTION %s(", quoteQualified(c.get("schema_name"), c.get("function_name"))),
+			fmt.Sprintf("FUNCTION %s(", quoteQualified(dbInfo2.DbSchema, c.get("function_name"))),
 			-1)
 	}
 
@@ -129,7 +135,8 @@ func (c FunctionSchema) Drop() {
 	fmt.Println("-- Note that CASCADE in the statement below will also drop any triggers depending on this function.")
 	fmt.Println("-- Also, if there are two functions with this name, you will want to add arguments to identify the correct one to drop.")
 	fmt.Println("-- (See http://www.postgresql.org/docs/9.4/interactive/sql-dropfunction.html) ")
-	fmt.Printf("DROP FUNCTION %s.%s CASCADE;\n", c.get("schema_name"), c.get("function_name"))
+	fmt.Printf("DROP FUNCTION %s CASCADE;\n",
+		quoteQualified(c.get("schema_name"), c.get("function_name")))
 }
 
 // Change handles the case where the function names match, but the definition does not
@@ -138,21 +145,18 @@ func (c FunctionSchema) Change(obj interface{}) {
 	if !ok {
 		fmt.Println("Error!!!, Change needs a FunctionSchema instance", c2)
 	}
-	if c.get("definition") != c2.get("definition") {
+	if !defsEqual(c.get("definition"), c2.get("definition")) {
 		fmt.Println("-- This function is different so we'll recreate it:")
 
-		// If we are comparing two different schemas against each other, we need to do some
-		// modification of the first function definition so we create it in the right schema
 		functionDef := c.get("definition")
 		if dbInfo1.DbSchema != dbInfo2.DbSchema {
 			functionDef = strings.Replace(
 				functionDef,
-				fmt.Sprintf("FUNCTION %s.%s(", c.get("schema_name"), c.get("function_name")),
-				fmt.Sprintf("FUNCTION %s.%s(", dbInfo2.DbSchema, c.get("function_name")),
+				fmt.Sprintf("FUNCTION %s(", quoteQualified(c.get("schema_name"), c.get("function_name"))),
+				fmt.Sprintf("FUNCTION %s(", quoteQualified(dbInfo2.DbSchema, c.get("function_name"))),
 				-1)
 		}
 
-		// The definition column has everything needed to rebuild the function
 		fmt.Println("-- STATEMENT-BEGIN")
 		fmt.Printf("%s;\n", functionDef)
 		fmt.Println("-- STATEMENT-END")

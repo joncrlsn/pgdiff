@@ -1,0 +1,10 @@
+# build environment for release archives produced by build.sh.
+# build.sh needs `zip` (not in the base golang image); cross-compilation for
+# linux/darwin/windows works out of the box with the go toolchain.
+FROM golang:1.22
+
+RUN apt-get update -qq \
+ && apt-get install -y --no-install-recommends zip \
+ && rm -rf /var/lib/apt/lists/*
+
+WORKDIR /src

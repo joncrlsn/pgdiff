@@ -135,7 +135,10 @@ func (c OwnerSchema) Change(obj interface{}) {
 	}
 
 	if c.get("owner") != c2.get("owner") {
-		fmt.Printf("ALTER %s %s.%s OWNER TO %s; \n", c.get("type"), c2.get("schema_name"), c.get("relationship_name"), c.get("owner"))
+		fmt.Printf("ALTER %s %s OWNER TO %s; \n",
+			c.get("type"),
+			quoteQualified(c2.get("schema_name"), c.get("relationship_name")),
+			quoteIdent(c.get("owner")))
 	}
 }
 

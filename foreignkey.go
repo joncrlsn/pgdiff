@@ -56,10 +56,7 @@ func (slice ForeignKeyRows) Len() int {
 }
 
 func (slice ForeignKeyRows) Less(i, j int) bool {
-	if slice[i]["compare_name"] != slice[j]["compare_name"] {
-		return slice[i]["compare_name"] < slice[j]["compare_name"]
-	}
-	return slice[i]["constraint_def"] < slice[j]["constraint_def"]
+	return slice[i]["compare_name"] < slice[j]["compare_name"]
 }
 
 func (slice ForeignKeyRows) Swap(i, j int) {
@@ -104,22 +101,17 @@ func (c *ForeignKeySchema) NextRow() bool {
 	return !c.done
 }
 
-// Compare tells you, in one pass, whether or not the first row matches, is less than, or greater than the second row
+// Compare matches on schema.table.fk_name only. fk names are unique per table,
+// so the qualified name uniquely identifies an fk; including the def here would
+// split same-named-different-def rows into separate add/drop entries that emit
+// in the wrong order (ADD before DROP, which fails because the name already exists).
 func (c *ForeignKeySchema) Compare(obj interface{}) int {
 	c2, ok := obj.(*ForeignKeySchema)
 	if !ok {
 		fmt.Println("Error!!!, Compare(obj) needs a ForeignKeySchema instance", c2)
 		return +999
 	}
-
-	//fmt.Printf("Comparing %s with %s", c.get("table_name"), c2.get("table_name"))
-	val := misc.CompareStrings(c.get("compare_name"), c2.get("compare_name"))
-	if val != 0 {
-		return val
-	}
-
-	val = misc.CompareStrings(c.get("constraint_def"), c2.get("constraint_def"))
-	return val
+	return misc.CompareStrings(c.get("compare_name"), c2.get("compare_name"))
 }
 
 // Add returns SQL to add the foreign key
@@ -128,21 +120,47 @@ func (c *ForeignKeySchema) Add() {
 	if schema == "*" {
 		schema = c.get("schema_name")
 	}
-	fmt.Printf("ALTER TABLE %s.%s ADD CONSTRAINT %s %s;\n", schema, c.get("table_name"), c.get("fk_name"), c.get("constraint_def"))
+	fmt.Printf("ALTER TABLE %s ADD CONSTRAINT %s %s;\n",
+		quoteQualified(schema, c.get("table_name")),
+		quoteIdent(c.get("fk_name")),
+		c.get("constraint_def"))
 }
 
 // Drop returns SQL to drop the foreign key
 func (c ForeignKeySchema) Drop() {
-	fmt.Printf("ALTER TABLE %s.%s DROP CONSTRAINT %s; -- %s\n", c.get("schema_name"), c.get("table_name"), c.get("fk_name"), c.get("constraint_def"))
+	fmt.Printf("ALTER TABLE %s DROP CONSTRAINT %s; -- %s\n",
+		quoteQualified(c.get("schema_name"), c.get("table_name")),
+		quoteIdent(c.get("fk_name")),
+		c.get("constraint_def"))
 }
 
-// Change handles the case where the table and foreign key name, but the details do not
+// Change handles a definition mismatch on the same fk name. fks can't be
+// altered in place (NOT VALID flag, ON UPDATE/DELETE actions, columns, etc.),
+// so we drop dst's then add src's.
 func (c *ForeignKeySchema) Change(obj interface{}) {
 	c2, ok := obj.(*ForeignKeySchema)
 	if !ok {
 		fmt.Println("Error!!!, ForeignKeySchema.Change(obj) needs a ForeignKeySchema instance", c2)
+		return
 	}
-	// There is no "changing" a foreign key.  It either gets created or dropped (or left as-is).
+	if defsEqual(c.get("constraint_def"), c2.get("constraint_def")) {
+		return
+	}
+
+	dstSchema := c2.get("schema_name")
+	addSchema := dbInfo2.DbSchema
+	if addSchema == "*" {
+		addSchema = dstSchema
+	}
+
+	fmt.Printf("ALTER TABLE %s DROP CONSTRAINT %s; -- %s\n",
+		quoteQualified(dstSchema, c2.get("table_name")),
+		quoteIdent(c2.get("fk_name")),
+		c2.get("constraint_def"))
+	fmt.Printf("ALTER TABLE %s ADD CONSTRAINT %s %s;\n",
+		quoteQualified(addSchema, c.get("table_name")),
+		quoteIdent(c.get("fk_name")),
+		c.get("constraint_def"))
 }
 
 /*

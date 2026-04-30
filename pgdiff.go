@@ -7,9 +7,9 @@
 package main
 
 import (
+	"database/sql"
 	"fmt"
 	"log"
-
 	"os"
 	"strings"
 
@@ -34,10 +34,10 @@ const (
 )
 
 var (
-	args       []string
-	dbInfo1    pgutil.DbInfo
-	dbInfo2    pgutil.DbInfo
-	schemaType string
+	args          []string
+	dbInfo1       pgutil.DbInfo
+	dbInfo2       pgutil.DbInfo
+	excludeChecks map[string]struct{}
 )
 
 /*
@@ -72,7 +72,7 @@ func main() {
 	}
 
 	if len(args) == 0 {
-		fmt.Println("The required first argument is SchemaType: SCHEMA, ROLE, SEQUENCE, TABLE, VIEW, MATVIEW, COLUMN, INDEX, FOREIGN_KEY, OWNER, GRANT_RELATIONSHIP, GRANT_ATTRIBUTE")
+		fmt.Fprintln(os.Stderr, "The required first argument is one or more comma-separated SchemaTypes: "+strings.Join(schemaTypeOrder, ", "))
 		os.Exit(1)
 	}
 
@@ -83,12 +83,11 @@ func main() {
 		os.Exit(1)
 	}
 
-	schemaType = strings.ToUpper(args[0])
-	fmt.Println("-- schemaType:", schemaType)
-
-	fmt.Println("-- db1:", dbInfo1)
-	fmt.Println("-- db2:", dbInfo2)
-	fmt.Println("-- Run the following SQL against db2:")
+	schemaTypes, err := parseSchemaTypes(args[0])
+	if err != nil {
+		fmt.Fprintln(os.Stderr, err)
+		os.Exit(1)
+	}
 
 	conn1, err := dbInfo1.Open()
 	check("opening database 1", err)
@@ -96,60 +95,134 @@ func main() {
 	conn2, err := dbInfo2.Open()
 	check("opening database 2", err)
 
-	// This section needs to be improved so that you do not need to choose the type
-	// of alter statements to generate.  Rather, all should be generated in the
-	// proper order.
-	if schemaType == "ALL" {
-		if dbInfo1.DbSchema == "*" {
-			compareSchematas(conn1, conn2)
-		}
-		compareSchematas(conn1, conn2)
-		compareRoles(conn1, conn2)
-		compareSequences(conn1, conn2)
-		compareTables(conn1, conn2)
-		compareColumns(conn1, conn2)
-		compareIndexes(conn1, conn2) // includes PK and Unique constraints
-		compareViews(conn1, conn2)
-		compareMatViews(conn1, conn2)
-		compareForeignKeys(conn1, conn2)
-		compareFunctions(conn1, conn2)
-		compareTriggers(conn1, conn2)
-		compareOwners(conn1, conn2)
-		compareGrantRelationships(conn1, conn2)
-		compareGrantAttributes(conn1, conn2)
-	} else if schemaType == "SCHEMA" {
-		compareSchematas(conn1, conn2)
-	} else if schemaType == "ROLE" {
-		compareRoles(conn1, conn2)
-	} else if schemaType == "SEQUENCE" {
-		compareSequences(conn1, conn2)
-	} else if schemaType == "TABLE" {
-		compareTables(conn1, conn2)
-	} else if schemaType == "COLUMN" {
-		compareColumns(conn1, conn2)
-	} else if schemaType == "TABLE_COLUMN" {
-		compareTableColumns(conn1, conn2)
-	} else if schemaType == "INDEX" {
-		compareIndexes(conn1, conn2)
-	} else if schemaType == "VIEW" {
-		compareViews(conn1, conn2)
-	} else if schemaType == "MATVIEW" {
-		compareMatViews(conn1, conn2)
-	} else if schemaType == "FOREIGN_KEY" {
-		compareForeignKeys(conn1, conn2)
-	} else if schemaType == "FUNCTION" {
-		compareFunctions(conn1, conn2)
-	} else if schemaType == "TRIGGER" {
-		compareTriggers(conn1, conn2)
-	} else if schemaType == "OWNER" {
-		compareOwners(conn1, conn2)
-	} else if schemaType == "GRANT_RELATIONSHIP" {
-		compareGrantRelationships(conn1, conn2)
-	} else if schemaType == "GRANT_ATTRIBUTE" {
-		compareGrantAttributes(conn1, conn2)
-	} else {
-		fmt.Println("Not yet handled:", schemaType)
+	for _, st := range schemaTypes {
+		runComparison(st, conn1, conn2)
 	}
+}
+
+// schemaTypeOrder is the order shown in help / error text.
+// validSchemaTypes is the O(1) membership set used by the parser.
+// Keep both in sync when adding a new comparator.
+var schemaTypeOrder = []string{
+	"ALL",
+	"SCHEMA",
+	"ROLE",
+	"ENUM",
+	"SEQUENCE",
+	"TABLE",
+	"TABLE_COLUMN",
+	"COLUMN",
+	"CHECK",
+	"INDEX",
+	"VIEW",
+	"MATVIEW",
+	"FOREIGN_KEY",
+	"FUNCTION",
+	"TRIGGER",
+	"OWNER",
+	"GRANT_RELATIONSHIP",
+	"GRANT_ATTRIBUTE",
+	"EXTENSION",
+	"COMMENT",
+}
+
+var validSchemaTypes = map[string]struct{}{
+	"ALL":                {},
+	"SCHEMA":             {},
+	"ROLE":               {},
+	"ENUM":               {},
+	"SEQUENCE":           {},
+	"TABLE":              {},
+	"TABLE_COLUMN":       {},
+	"COLUMN":             {},
+	"CHECK":              {},
+	"INDEX":              {},
+	"VIEW":               {},
+	"MATVIEW":            {},
+	"FOREIGN_KEY":        {},
+	"FUNCTION":           {},
+	"TRIGGER":            {},
+	"OWNER":              {},
+	"GRANT_RELATIONSHIP": {},
+	"GRANT_ATTRIBUTE":    {},
+	"EXTENSION":          {},
+	"COMMENT":            {},
+}
+
+// parseSchemaTypes splits a comma-separated arg into upper-cased, trimmed schema type tokens.
+// Returns an error if any token is empty or unrecognized so we fail before opening connections.
+func parseSchemaTypes(raw string) ([]string, error) {
+	parts := strings.Split(strings.ToUpper(raw), ",")
+	out := make([]string, 0, len(parts))
+	var bad []string
+	for _, p := range parts {
+		p = strings.TrimSpace(p)
+		if p == "" {
+			continue
+		}
+		if _, ok := validSchemaTypes[p]; !ok {
+			bad = append(bad, p)
+			continue
+		}
+		if p == "ALL" {
+			return schemaTypeOrder[1:], nil
+		}
+		out = append(out, p)
+	}
+	if len(bad) > 0 {
+		return nil, fmt.Errorf("unknown schema type(s): %s. valid options: %s", strings.Join(bad, ", "), strings.Join(schemaTypeOrder, ", "))
+	}
+	if len(out) == 0 {
+		return nil, fmt.Errorf("no schema types provided")
+	}
+	return out, nil
+}
+
+// runComparison dispatches a single schema type to its comparator.
+// ALL runs every comparator in the canonical ordering.
+func runComparison(schemaType string, conn1, conn2 *sql.DB) {
+	fmt.Printf("-- BEGIN DIFF - %s\n", schemaType)
+	switch schemaType {
+	case "SCHEMA":
+		compareSchematas(conn1, conn2)
+	case "ROLE":
+		compareRoles(conn1, conn2)
+	case "ENUM":
+		compareEnums(conn1, conn2)
+	case "SEQUENCE":
+		compareSequences(conn1, conn2)
+	case "TABLE":
+		compareTables(conn1, conn2)
+	case "COLUMN":
+		compareColumns(conn1, conn2)
+	case "TABLE_COLUMN":
+		compareTableColumns(conn1, conn2)
+	case "CHECK":
+		compareChecks(conn1, conn2)
+	case "INDEX":
+		compareIndexes(conn1, conn2)
+	case "VIEW":
+		compareViews(conn1, conn2)
+	case "MATVIEW":
+		compareMatViews(conn1, conn2)
+	case "FOREIGN_KEY":
+		compareForeignKeys(conn1, conn2)
+	case "FUNCTION":
+		compareFunctions(conn1, conn2)
+	case "TRIGGER":
+		compareTriggers(conn1, conn2)
+	case "OWNER":
+		compareOwners(conn1, conn2)
+	case "GRANT_RELATIONSHIP":
+		compareGrantRelationships(conn1, conn2)
+	case "GRANT_ATTRIBUTE":
+		compareGrantAttributes(conn1, conn2)
+	case "EXTENSION":
+		compareExtensions(conn1, conn2)
+	case "COMMENT":
+		compareComments(conn1, conn2)
+	}
+	fmt.Printf("-- END DIFF - %s\n", schemaType)
 }
 
 /*
@@ -195,25 +268,32 @@ func usage() {
 	fmt.Fprintf(os.Stderr, "%s - version %s\n", os.Args[0], version)
 	fmt.Fprintf(os.Stderr, "usage: %s [<options>] <schemaType> \n", os.Args[0])
 	fmt.Fprintln(os.Stderr, `
-Compares the schema between two PostgreSQL databases and generates alter statements 
-that can be *manually* run against the second database.
+Compares the schema of a source PostgreSQL database against a destination database
+and generates alter statements that can be *manually* run against the destination.
 
 Options:
-  -?, --help    : print help information
-  -V, --version : print version information
-  -v, --verbose : print extra run information
-  -U, --user1   : first postgres user 
-  -u, --user2   : second postgres user 
-  -H, --host1   : first database host.  default is localhost 
-  -h, --host2   : second database host. default is localhost 
-  -P, --port1   : first port.  default is 5432 
-  -p, --port2   : second port. default is 5432 
-  -D, --dbname1 : first database name 
-  -d, --dbname2 : second database name 
-  -S, --schema1 : first schema.  default is all schemas
-  -s, --schema2 : second schema. default is all schemas
+  -?, --help     : print help information
+  -V, --version  : print version information
+  --src-url      : source db connection url (postgres://user:pass@host:port/dbname?schema=...&sslmode=disable)
+  --src-user     : source db user
+  --src-pass     : source db password
+  --src-host     : source db host. default is localhost
+  --src-port     : source db port. default is 5432
+  --src-name     : source db name
+  --src-schema   : source schema. default is * (all non-system schemas)
+  --src-options  : source db options (eg. sslmode=disable)
+  --dst-url      : destination db connection url
+  --dst-user     : destination db user
+  --dst-pass     : destination db password
+  --dst-host     : destination db host. default is localhost
+  --dst-port     : destination db port. default is 5432
+  --dst-name     : destination db name
+  --dst-schema   : destination schema. default is * (all non-system schemas)
+  --dst-options  : destination db options
+  --exclude-check: comma-separated check constraints to skip (format: schema.table.constraint).
+                   useful when src/dst PG versions normalize check expressions differently.
 
-<schemaTpe> can be: ALL, SCHEMA, ROLE, SEQUENCE, TABLE, TABLE_COLUMN, VIEW, MATVIEW, COLUMN, INDEX, FOREIGN_KEY, OWNER, GRANT_RELATIONSHIP, GRANT_ATTRIBUTE, TRIGGER, FUNCTION`)
+<schemaType> can be one or more (comma-separated) of: ALL, SCHEMA, ROLE, ENUM, SEQUENCE, TABLE, TABLE_COLUMN, COLUMN, CHECK, INDEX, VIEW, MATVIEW, FOREIGN_KEY, FUNCTION, TRIGGER, OWNER, GRANT_RELATIONSHIP, GRANT_ATTRIBUTE, EXTENSION, COMMENT`)
 
 	os.Exit(2)
 }
@@ -222,4 +302,38 @@ func check(msg string, err error) {
 	if err != nil {
 		log.Fatal("Error "+msg, err)
 	}
+}
+
+// quoteIdent wraps a Postgres identifier (schema, table, column, sequence, ...) in
+// double quotes so that case-sensitive names like "userId" survive — unquoted
+// identifiers are folded to lowercase by the parser. Embedded double quotes are
+// doubled per the SQL spec.
+func quoteIdent(s string) string {
+	return `"` + strings.ReplaceAll(s, `"`, `""`) + `"`
+}
+
+// quoteQualified joins identifiers with `.` and quotes each part. Use it for
+// schema.table, schema.table.column, etc.
+func quoteQualified(parts ...string) string {
+	out := make([]string, len(parts))
+	for i, p := range parts {
+		out[i] = quoteIdent(p)
+	}
+	return strings.Join(out, ".")
+}
+
+// defsEqual compares function/view definitions while ignoring per-line leading
+// and trailing whitespace. editors and migration tools commonly strip trailing
+// whitespace or re-indent on save, which would otherwise cause perpetual diffs
+// even when the body is logically identical.
+func defsEqual(a, b string) bool {
+	return normalizeWhitespace(a) == normalizeWhitespace(b)
+}
+
+func normalizeWhitespace(s string) string {
+	lines := strings.Split(s, "\n")
+	for i, l := range lines {
+		lines[i] = strings.TrimSpace(l)
+	}
+	return strings.Join(lines, "\n")
 }

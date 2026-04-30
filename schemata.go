@@ -73,15 +73,14 @@ func (c *SchemataSchema) Compare(obj interface{}) int {
 
 // Add returns SQL to add the schemata
 func (c SchemataSchema) Add() {
-	// CREATE SCHEMA schema_name [ AUTHORIZATION user_name
-	fmt.Printf("CREATE SCHEMA %s AUTHORIZATION %s;", c.get("schema_name"), c.get("schema_owner"))
+	fmt.Printf("CREATE SCHEMA %s AUTHORIZATION %s;",
+		quoteIdent(c.get("schema_name")), quoteIdent(c.get("schema_owner")))
 	fmt.Println()
 }
 
 // Drop returns SQL to drop the schemata
 func (c SchemataSchema) Drop() {
-	// DROP SCHEMA [ IF EXISTS ] name [, ...] [ CASCADE | RESTRICT ]
-	fmt.Printf("DROP SCHEMA IF EXISTS %s;\n", c.get("schema_name"))
+	fmt.Printf("DROP SCHEMA IF EXISTS %s;\n", quoteIdent(c.get("schema_name")))
 }
 
 // Change handles the case where the schema name matches, but the details do not

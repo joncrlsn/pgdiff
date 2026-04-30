@@ -7,8 +7,8 @@ pgdiff is transparent in what it does, so it never modifies a database directly.
 pgdiff is written to be easy to expand and improve the accuracy of the diff.
 
 
-### download 1.0 beta 1
-[osx](https://github.com/joncrlsn/pgdiff/releases/download/v1.0-beta.1/pgdiff-osx-1.0b1.tar.gz "OSX version") &nbsp; [linux](https://github.com/joncrlsn/pgdiff/files/1480823/pgdiff-linux-1.0b1.tar.gz  "Linux version") &nbsp; [windows](https://github.com/joncrlsn/pgdiff/releases/download/v1.0-beta.1/pgdiff-win-1.0b1.zip "Windows version")
+### download
+downloads can be found in the [releases page](https://github.com/Leonardo-Interactive/pgdiff/releases)
 
 
 ### usage
@@ -41,38 +41,50 @@ Schema type ordering:
 ### example
 I have found it helpful to take ```--schema-only``` dumps of the databases in question, load them into a local postgres, then do my sql generation and testing there before running the SQL against a more official database. Your local postgres instance will need the correct users/roles populated because db dumps do not copy that information.
 
+Using individual flags:
+
 ```
-pgdiff -U dbuser -H localhost -D refDB  -O "sslmode=disable" -S public \
-       -u dbuser -h localhost -d compDB -o "sslmode=disable" -s public \
-       TABLE 
+pgdiff --src-user=dbuser --src-host=localhost --src-name=refDB  --src-options="sslmode=disable" --src-schema=public \
+       --dst-user=dbuser --dst-host=localhost --dst-name=compDB --dst-options="sslmode=disable" --dst-schema=public \
+       TABLE
+```
+
+Or using connection URLs (schema can be passed as a query param):
+
+```
+pgdiff --src-url="postgres://dbuser@localhost/refDB?sslmode=disable&schema=public" \
+       --dst-url="postgres://dbuser@localhost/compDB?sslmode=disable&schema=public" \
+       TABLE
 ```
 
 
 ### options
 
-options           | explanation 
-----------------: | ------------------------------------
-  -V, --version   | prints the version of pgdiff being used
-  -?, --help      | displays helpful usage information
-  -U, --user1     | first postgres user
-  -u, --user2     | second postgres user
-  -W, --password1 | first db password
-  -w, --password2 | second db password
-  -H, --host1     | first db host.  default is localhost
-  -h, --host2     | second db host. default is localhost
-  -P, --port1     | first db port number.  default is 5432
-  -p, --port2     | second db port number. default is 5432
-  -D, --dbname1   | first db name
-  -d, --dbname2   | second db name
-  -S, --schema1   | first schema name.  default is * (all non-system schemas)
-  -s, --schema2   | second schema name. default is * (all non-system schemas)
-  -O, --option1   | first db options. example: sslmode=disable
-  -o, --option2   | second db options. example: sslmode=disable
+options         | explanation
+--------------: | ------------------------------------
+  -V, --version | prints the version of pgdiff being used
+  -?, --help    | displays helpful usage information
+  --src-url     | source db connection url (eg. `postgres://user:pass@host:port/dbname?schema=...&sslmode=disable`)
+  --src-user    | source db user
+  --src-pass    | source db password
+  --src-host    | source db host. default is localhost
+  --src-port    | source db port. default is 5432
+  --src-name    | source db name
+  --src-schema  | source schema name. default is `*` (all non-system schemas)
+  --src-options | source db options (eg. `sslmode=disable`)
+  --dst-url     | destination db connection url
+  --dst-user    | destination db user
+  --dst-pass    | destination db password
+  --dst-host    | destination db host. default is localhost
+  --dst-port    | destination db port. default is 5432
+  --dst-name    | destination db name
+  --dst-schema  | destination schema name. default is `*` (all non-system schemas)
+  --dst-options | destination db options
 
 
 ### getting started on linux and osx
 
-linux and osx binaries are packaged with an extra, optional bash script and pgrun program that helps speed the diffing process. 
+linux and osx binaries are packaged 
 
 1. download the tgz file for your OS
 1. untar it:  ```tar -xzvf pgdiff.tgz```

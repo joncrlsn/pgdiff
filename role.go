@@ -149,12 +149,12 @@ func (c RoleSchema) Add() {
 		options += fmt.Sprintf(" VALID UNTIL '%s'", c.get("rolvaliduntil"))
 	}
 
-	fmt.Printf("CREATE ROLE %s%s;\n", c.get("rolname"), options)
+	fmt.Printf("CREATE ROLE %s%s;\n", quoteIdent(c.get("rolname")), options)
 }
 
 // Drop generates SQL to drop the role
 func (c RoleSchema) Drop() {
-	fmt.Printf("DROP ROLE %s;\n", c.get("rolname"))
+	fmt.Printf("DROP ROLE %s;\n", quoteIdent(c.get("rolname")))
 }
 
 // Change handles the case where the role name matches, but the details do not
@@ -235,7 +235,7 @@ func (c RoleSchema) Change(obj interface{}) {
 
 	// Only alter if we have changes
 	if len(options) > 0 {
-		fmt.Printf("ALTER ROLE %s%s;\n", c.get("rolname"), options)
+		fmt.Printf("ALTER ROLE %s%s;\n", quoteIdent(c.get("rolname")), options)
 	}
 
 	if c.get("memberof") != c2.get("memberof") {
@@ -252,13 +252,13 @@ func (c RoleSchema) Change(obj interface{}) {
 		// TODO: Define INHERIT or not
 		for _, mo1 := range membersof1 {
 			if !misc.ContainsString(membersof2, mo1) {
-				fmt.Printf("GRANT %s TO %s;\n", mo1, c.get("rolname"))
+				fmt.Printf("GRANT %s TO %s;\n", quoteIdent(mo1), quoteIdent(c.get("rolname")))
 			}
 		}
 
 		for _, mo2 := range membersof2 {
 			if !misc.ContainsString(membersof1, mo2) {
-				fmt.Printf("REVOKE %s FROM %s;\n", mo2, c.get("rolname"))
+				fmt.Printf("REVOKE %s FROM %s;\n", quoteIdent(mo2), quoteIdent(c.get("rolname")))
 			}
 		}
 
